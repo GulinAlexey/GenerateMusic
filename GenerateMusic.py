@@ -1,14 +1,18 @@
 import PySimpleGUI as sg
 import mido
 
+midiFormat = '.mid'
 format0FilenameEnd = '_format0.mid'
+resultFilenameEnd = '_result.mid'
 
-def convertType1ToType0(midiType1File):
-    midiType1 = mido.MidiFile(midiType1File)
+def convertType1ToType0(midiType1FilePath):
+    midiType1 = mido.MidiFile(midiType1FilePath)
     midiType0Tracks = mido.merge_tracks(midiType1.tracks)
     midiType0 = mido.MidiFile(type = 0, ticks_per_beat=midiType1.ticks_per_beat)
     midiType0.tracks.append(midiType0Tracks)
-    midiType0.save(midiType1.filename + format0FilenameEnd)
+    filename = midiType1FilePath.removesuffix(midiFormat) + format0FilenameEnd
+    midiType0.save(filename)
+    return filename
 
 layout = [
     [sg.Text('MIDI файл'), sg.InputText(),
@@ -22,4 +26,4 @@ while True:                             # The Event Loop
     if event in (None, 'Exit', 'Cancel'):
         break
     if event == 'Генерировать':
-        convertType1ToType0(values["inputFile"])
+        midiFileType0Path = convertType1ToType0(values["inputFile"])
