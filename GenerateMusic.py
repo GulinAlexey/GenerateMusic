@@ -16,7 +16,7 @@ layout = [
     [sg.Output(size=(63, 10))],
     [sg.Submit('Генерировать'), sg.Cancel('Отмена')]
 ]
-window = sg.Window('Генерация музыки', layout)
+window = sg.Window('Генерация музыки', layout, icon='app_icon.ico')
 while True:                             # The Event Loop
     event, values = window.read()
     if event in (None, 'Exit', 'Cancel'):
