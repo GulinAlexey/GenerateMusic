@@ -16,7 +16,7 @@ def convertType1ToType0(midiType1FilePath):
     midiType0.save(filename)
     return filename
 
-def MidiGenerate(midiType0FilesPaths, newFileNamePath):
+def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds):
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
@@ -35,7 +35,9 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
     #[sg.Text('Лог работы:')],
     #[sg.Output(size=(63, 10))],
-    [sg.Text('Имя генерируемого файла:'), sg.InputText(key = 'newFilePath', size=(34,1)), sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
+    [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', size=(34,1)),
+    sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
+    [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
@@ -53,11 +55,19 @@ while True:                             # The Event Loop
     if event == 'ClearFiles':
         midiList.clear()
         window['MidiListView'].update(midiList)
-    if event == 'Generate' and midiList and values['newFilePath']:
+    if event == 'Duration' and values['Duration'] and values['Duration'][-1] not in ('0123456789:')\
+            or values['Duration'].count(':') > 1:
+        window['Duration'].update(values['Duration'][:-1])
+    if event == 'Generate' and midiList and values['NewFilePath']:
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
-        MidiGenerate(midiFilesType0Paths, values['newFilePath'])
+        partitionOfDuration = values['Duration'].partition(':')
+        if(partitionOfDuration[1] == ''):
+            duration = int(partitionOfDuration[0])
+        else:
+            duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
+        MidiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
         #for midi0 in midiFilesType0Paths:
             #os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
