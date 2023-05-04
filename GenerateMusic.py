@@ -29,30 +29,31 @@ def MidiGenerate(midiType0FilesPaths):
 midiList = []
 
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
-    sg.Column([[sg.FileBrowse('Добавить',key="InputFile",
-    enable_events=True, file_types=(("MIDI files", "*.mid"),))]]),
-    sg.Button('Удалить', key="DeleteFile"), sg.Button('Очистить', key="ClearFiles")],
-    [sg.Listbox(midiList, size=(63,10), enable_events=True,  key="MidiListView")],
+    sg.Column([[sg.FileBrowse('Добавить',key='InputFile',
+    enable_events=True, file_types=(('MIDI files', '*.mid'),))]]),
+    sg.Button('Удалить', key='DeleteFile'), sg.Button('Очистить', key='ClearFiles')],
+    [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
     #[sg.Text('Лог работы:')],
     #[sg.Output(size=(63, 10))],
-    [sg.Push(), sg.Submit('Генерировать', key="Generate"),
-    sg.Cancel('Отменить и выйти', key="Cancel"), sg.Push()]
+    [sg.Text('Имя генерируемого файла:'), sg.InputText(key = 'newFilePath', size=(34,1)), sg.FileSaveAs('Сохранить как', file_types=('MIDI files', '*.mid'))],
+    [sg.Push(), sg.Submit('Генерировать', key='Generate'),
+    sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
 window = sg.Window('Генерация музыки', layout, icon='app_icon.ico')
 while True:                             # The Event Loop
     event, values = window.read()
-    if event in (None, 'Exit', "Cancel"):
+    if event in (None, 'Exit', 'Cancel'):
         break
-    if event == "InputFile":
-        midiList.append(values["InputFile"])
-        window["MidiListView"].update(midiList)
-    if event == "DeleteFile" and values["MidiListView"]:
-        midiList.remove(values["MidiListView"][0])
-        window["MidiListView"].update(midiList)
-    if event == "ClearFiles":
+    if event == 'InputFile':
+        midiList.append(values['InputFile'])
+        window['MidiListView'].update(midiList)
+    if event == 'DeleteFile' and values['MidiListView']:
+        midiList.remove(values['MidiListView'][0])
+        window['MidiListView'].update(midiList)
+    if event == 'ClearFiles':
         midiList.clear()
-        window["MidiListView"].update(midiList)
-    if event == "Generate" and midiList:
+        window['MidiListView'].update(midiList)
+    if event == 'Generate' and midiList:
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
