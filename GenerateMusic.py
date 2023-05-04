@@ -68,7 +68,7 @@ while True:                             # The Event Loop
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
         MidiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
-        #for midi0 in midiFilesType0Paths:
-            #os.remove(midi0)
+        for midi0 in midiFilesType0Paths:
+            os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
