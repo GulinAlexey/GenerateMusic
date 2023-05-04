@@ -16,20 +16,22 @@ def convertType1ToType0(midiType1FilePath):
     midiType0.save(filename)
     return filename
 
-def MidiGenerate(midiType0FilePath):
-    inputMidi = mido.MidiFile(midiType0FilePath)
-    outputMidi = mido.MidiFile(type = 0, ticks_per_beat=inputMidi.ticks_per_beat)
+def MidiGenerate(midiType0FilesPaths):
+    inputMidis = []
+    for path in midiType0FilesPaths:
+        inputMidis.append(mido.MidiFile(path))
+    outputMidi = mido.MidiFile(type = 0, ticks_per_beat=inputMidis[0].ticks_per_beat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
     #############################
-    outputMidi.save(midiType0FilePath.removesuffix(format0FilenameEnd) + resultFilenameEnd)
+    outputMidi.save(midiType0FilesPaths[0].removesuffix(format0FilenameEnd) + resultFilenameEnd)
 
 midiList = []
 
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.Column([[sg.FileBrowse('Добавить',key="InputFile",
     enable_events=True, file_types=(("MIDI files", "*.mid"),))]]),
-    sg.Button('Удалить', key="DeleteFile")],
+    sg.Button('Удалить', key="DeleteFile"), sg.Button('Очистить', key="ClearFiles")],
     [sg.Listbox(midiList, size=(63,10), enable_events=True,  key="MidiListView")],
     #[sg.Text('Лог работы:')],
     #[sg.Output(size=(63, 10))],
@@ -47,10 +49,14 @@ while True:                             # The Event Loop
     if event == "DeleteFile" and values["MidiListView"]:
         midiList.remove(values["MidiListView"][0])
         window["MidiListView"].update(midiList)
-    if event == "Generate":
+    if event == "ClearFiles":
+        midiList.clear()
+        window["MidiListView"].update(midiList)
+    if event == "Generate" and midiList:
+        midiFilesType0Paths = []
         for midiElement in midiList:
-            midiFileType0Path = convertType1ToType0(midiElement)
-            MidiGenerate(midiFileType0Path)
+            midiFilesType0Paths.append(convertType1ToType0(midiElement))
+        MidiGenerate(midiFilesType0Paths)
             #os.remove(midiFileType0Path)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
-                 any_key_closes = True, grab_anywhere = True)
+                 any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
