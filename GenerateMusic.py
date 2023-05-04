@@ -16,7 +16,7 @@ def convertType1ToType0(midiType1FilePath):
     midiType0.save(filename)
     return filename
 
-def MidiGenerate(midiType0FilesPaths):
+def MidiGenerate(midiType0FilesPaths, newFileNamePath):
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
@@ -24,7 +24,7 @@ def MidiGenerate(midiType0FilesPaths):
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
     #############################
-    outputMidi.save(midiType0FilesPaths[0].removesuffix(format0FilenameEnd) + resultFilenameEnd)
+    outputMidi.save(newFileNamePath)
 
 midiList = []
 
@@ -35,7 +35,7 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
     #[sg.Text('Лог работы:')],
     #[sg.Output(size=(63, 10))],
-    [sg.Text('Имя генерируемого файла:'), sg.InputText(key = 'newFilePath', size=(34,1)), sg.FileSaveAs('Сохранить как', file_types=('MIDI files', '*.mid'))],
+    [sg.Text('Имя генерируемого файла:'), sg.InputText(key = 'newFilePath', size=(34,1)), sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
@@ -53,11 +53,12 @@ while True:                             # The Event Loop
     if event == 'ClearFiles':
         midiList.clear()
         window['MidiListView'].update(midiList)
-    if event == 'Generate' and midiList:
+    if event == 'Generate' and midiList and values['newFilePath']:
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
-        MidiGenerate(midiFilesType0Paths)
-            #os.remove(midiFileType0Path)
+        MidiGenerate(midiFilesType0Paths, values['newFilePath'])
+        #for midi0 in midiFilesType0Paths:
+            #os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
