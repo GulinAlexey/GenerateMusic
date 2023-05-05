@@ -33,11 +33,11 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     enable_events=True, file_types=(('MIDI files', '*.mid'),))]]),
     sg.Button('Удалить', key='DeleteFile'), sg.Button('Очистить', key='ClearFiles')],
     [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
-    #[sg.Text('Лог работы:')],
-    #[sg.Output(size=(63, 10))],
     [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', size=(34,1)),
     sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
+    #[sg.Text('Лог работы:')],
+    #[sg.Output(size=(73, 10))],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
