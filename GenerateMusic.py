@@ -36,6 +36,7 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', size=(34,1)),
     sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
+    [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
     #[sg.Text('Лог работы:')],
     #[sg.Output(size=(73, 10))],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
@@ -72,3 +73,5 @@ while True:                             # The Event Loop
             os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
+        if values['OpenAfterGeneration'] == True:
+            os.system(values['NewFilePath'])
