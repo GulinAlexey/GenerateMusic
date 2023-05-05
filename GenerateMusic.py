@@ -2,11 +2,15 @@ import PySimpleGUI as sg
 import mido
 import os
 
+import Chord
+import ListOfChords
+import Node
+
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat
 resultFilenameEnd = '_result' + midiFormat
 
-def convertType1ToType0(midiType1FilePath):
+def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
     midiType1 = mido.MidiFile(midiType1FilePath)
     midiType0Tracks = mido.merge_tracks(midiType1.tracks)
     midiType0 = mido.MidiFile(type = 0, ticks_per_beat=midiType1.ticks_per_beat)
@@ -16,7 +20,7 @@ def convertType1ToType0(midiType1FilePath):
     midiType0.save(filename)
     return filename
 
-def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds):
+def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Генерация нового MIDI-файла
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
@@ -26,8 +30,9 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds):
     #############################
     outputMidi.save(newFileNamePath)
 
-midiList = []
+midiList = [] #Список исходных MIDI-файлов для генерации
 
+#интерфейс
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.Column([[sg.FileBrowse('Добавить',key='InputFile',
     enable_events=True, file_types=(('MIDI files', '*.mid'),))]]),
@@ -42,36 +47,36 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
-window = sg.Window('Генерация музыки', layout, icon='app_icon.ico')
-while True:                             # The Event Loop
+window = sg.Window('Генерация музыки', layout, icon='app_icon.ico') #Окно программы
+while True:                             #The Event Loop
     event, values = window.read()
-    if event in (None, 'Exit', 'Cancel'):
+    if event in (None, 'Exit', 'Cancel'): #Выход из программы
         break
-    if event == 'InputFile':
+    if event == 'InputFile': #Добавить MIDI-файл в список исходных файлов для генерации
         midiList.append(values['InputFile'])
         window['MidiListView'].update(midiList)
-    if event == 'DeleteFile' and values['MidiListView']:
+    if event == 'DeleteFile' and values['MidiListView']: #Удалить файл из списка исходных файлов для генерации
         midiList.remove(values['MidiListView'][0])
         window['MidiListView'].update(midiList)
-    if event == 'ClearFiles':
+    if event == 'ClearFiles': #Очистить список исходных файлов для генерации
         midiList.clear()
         window['MidiListView'].update(midiList)
     if event == 'Duration' and values['Duration'] and values['Duration'][-1] not in ('0123456789:')\
-            or values['Duration'].count(':') > 1:
+            or values['Duration'].count(':') > 1: #Защита ввода продолжительности, только цифры и одно ":"
         window['Duration'].update(values['Duration'][:-1])
-    if event == 'Generate' and midiList and values['NewFilePath']:
+    if event == 'Generate' and midiList and values['NewFilePath']: #Генерация нового файла
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
         partitionOfDuration = values['Duration'].partition(':')
-        if(partitionOfDuration[1] == ''):
+        if(partitionOfDuration[1] == ''): #Получить продолжительность нового трека в секундах
             duration = int(partitionOfDuration[0])
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
         MidiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
-        for midi0 in midiFilesType0Paths:
+        for midi0 in midiFilesType0Paths: #Удалить промежуточные файлы
             os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
-        if values['OpenAfterGeneration'] == True:
+        if values['OpenAfterGeneration'] == True: #Открыть созданный файл, если отмечен checkbox
             os.system(values['NewFilePath'])
