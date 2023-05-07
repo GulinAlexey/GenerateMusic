@@ -33,10 +33,11 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
     outputMidi.save(newFileNamePath)
 
 def BuildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
-    roots = []
-    newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis])
+    roots = [] #грамматика - возвращаемое значение
+    newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #темп = среднеарифм. среди MIDI
     for midi in midis:
-        break ###############
+        messages = [m for m in midi.tracks[0] if isinstance(m, mido.Message)]
+        ##############
     return roots, newTicksPerBeat
 
 midiList = [] #Список исходных MIDI-файлов для генерации
