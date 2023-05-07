@@ -3,3 +3,4 @@ dist
 GenerateMusic.spec
 run.bat
 run python.bat
+__pycache__

@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import mido
 import os
+import statistics
 
 import Chord
 import ListOfChords
@@ -16,7 +17,7 @@ def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из ф
     midiType0 = mido.MidiFile(type = 0, ticks_per_beat=midiType1.ticks_per_beat)
     midiType0.tracks.append(midiType0Tracks)
     filename = midiType1FilePath.removesuffix(midiFormat) + format0FilenameEnd
-    #print(midiType0.tracks)
+    #print(midiType0.tracks) ###убрать в итоговой версии
     midiType0.save(filename)
     return filename
 
@@ -24,11 +25,19 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
-    outputMidi = mido.MidiFile(type = 0, ticks_per_beat=inputMidis[0].ticks_per_beat)
+    grammar, newTicksPerBeat = BuildGrammar(inputMidis)
+    outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
     #############################
     outputMidi.save(newFileNamePath)
+
+def BuildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
+    roots = []
+    newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis])
+    for midi in midis:
+        break ###############
+    return roots, newTicksPerBeat
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
@@ -42,8 +51,8 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
-    #[sg.Text('Лог работы:')],
-    #[sg.Output(size=(73, 10))],
+    [sg.Text('Лог работы:')], ###убрать в итоговой версии
+    [sg.Output(size=(73, 10))], ###убрать в итоговой версии
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
@@ -64,7 +73,7 @@ while True:                             #The Event Loop
     if event == 'Duration' and values['Duration'] and values['Duration'][-1] not in ('0123456789:')\
             or values['Duration'].count(':') > 1: #Защита ввода продолжительности, только цифры и одно ":"
         window['Duration'].update(values['Duration'][:-1])
-    if event == 'Generate' and midiList and values['NewFilePath']: #Генерация нового файла
+    if event == 'Generate' and midiList and values['NewFilePath'] and values['Duration']: #Генерация файла
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
@@ -76,7 +85,19 @@ while True:                             #The Event Loop
         MidiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
         for midi0 in midiFilesType0Paths: #Удалить промежуточные файлы
             os.remove(midi0)
-        sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True,
+        sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True, background_color='#1a263c',
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
         if values['OpenAfterGeneration'] == True: #Открыть созданный файл, если отмечен checkbox
             os.system(values['NewFilePath'])
+    if event == 'Generate' and not midiList:
+        sg.popup('Список исходных MIDI-файлов пуст, проверьте входные данные',
+                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                any_key_closes=True, grab_anywhere=True, button_justification='centered')
+    if event == 'Generate' and not values['NewFilePath']:
+        sg.popup('Не указан путь сохранения файла, проверьте входные данные',
+                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                any_key_closes=True, grab_anywhere=True, button_justification='centered')
+    if event == 'Generate' and not values['Duration']:
+        sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
+                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                any_key_closes=True, grab_anywhere=True, button_justification='centered')
