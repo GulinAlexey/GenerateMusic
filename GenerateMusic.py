@@ -50,7 +50,9 @@ def BuildGrammar(midis): #Построение контестно-зависим
                         messages[messages.index(m)-(messagesBeforeThisMsg.index(msgBefore))-1].duration = \
                             m.absolute - msgBefore.absolute    #записать длительность звучания ноты
                         break
-            #####
+        # убрать сообщения выключения ноты, так как инфо о длительности звучания хранится у сообщ-ий включения ноты
+        messages = [m for m in messages if m.msg.type!='note_off']
+        
         #for m in messages: ###убрать в итоговой версии
            #print('[', m.msg, 'абс=', m.absolute, 'длит=', m.duration, ']') ###убрать в итоговой версии
         ##############
