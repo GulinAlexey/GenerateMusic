@@ -42,6 +42,17 @@ def BuildGrammar(midis): #Построение контестно-зависим
         for m in messages:
             absoluteTime = absoluteTime + m.msg.time
             m.absolute = absoluteTime #получить абсолютное время для сообщения
+            if(m.msg.type == 'note_off'): #найти сообщение начала звучания ноты и записать для неё длительность
+                messagesBeforeThisMsg = list(reversed(messages[:(messages.index(m))]))
+                for msgBefore in messagesBeforeThisMsg:
+                    if(msgBefore.msg.type == 'note_on' and msgBefore.msg.channel == m.msg.channel
+                            and msgBefore.msg.note == m.msg.note):
+                        messages[messages.index(m)-(messagesBeforeThisMsg.index(msgBefore))-1].duration = \
+                            m.absolute - msgBefore.absolute    #записать длительность звучания ноты
+                        break
+            #####
+        #for m in messages: ###убрать в итоговой версии
+           #print('[', m.msg, 'абс=', m.absolute, 'длит=', m.duration, ']') ###убрать в итоговой версии
         ##############
     return roots, newTicksPerBeat
 
