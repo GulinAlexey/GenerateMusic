@@ -3,9 +3,10 @@ import mido
 import os
 import statistics
 
-import Chord
-import ListOfChords
-import Node
+from Chord import Chord
+from ListOfChords import ListOfChords
+from Node import Node
+from ExtendendMessage import ExtendendMessage
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat
@@ -36,7 +37,11 @@ def BuildGrammar(midis): #Построение контестно-зависим
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #темп = среднеарифм. среди MIDI
     for midi in midis:
-        messages = [m for m in midi.tracks[0] if isinstance(m, mido.Message)]
+        messages = [ExtendendMessage(m) for m in midi.tracks[0] if m.is_meta == False] #все сообщения трека (кроме мета-)
+        absoluteTime=0
+        for m in messages:
+            absoluteTime = absoluteTime + m.msg.time
+            m.absolute = absoluteTime #получить абсолютное время для сообщения
         ##############
     return roots, newTicksPerBeat
 
