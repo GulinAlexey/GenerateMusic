@@ -5,7 +5,6 @@ import statistics
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
-from ListOfChords import ListOfChords
 from Node import Node
 
 midiFormat = '.mid'
@@ -26,7 +25,7 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
-    grammar, newTicksPerBeat = BuildGrammar(inputMidis)
+    grammar, newTicksPerBeat, listOfChords = BuildGrammar(inputMidis)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
@@ -36,6 +35,7 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
 def BuildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #темп = среднеарифм. среди MIDI
+    listOfChords = [] #список аккордов для всех входных MIDI-файлов
     for midi in midis:
         messages = [ExtendendMessage(m) for m in midi.tracks[0] if m.is_meta == False] #все сообщения трека (кроме мета-)
         absoluteTime=0
@@ -56,9 +56,21 @@ def BuildGrammar(midis): #Построение контестно-зависим
         for m in messages: #сгруппировать сообщения по абсолютному времени в словарь (ключ - абсолютное время)
             msgGroups.setdefault(m.absolute, []).append(m)
         del messages
-        #for m in messages: ###убрать в итоговой версии
-           #print('[', m.msg, 'абс=', m.absolute, 'длит=', m.duration, ']') ###убрать в итоговой версии
-    return roots, newTicksPerBeat
+        chords = [] #список аккордов для данного MIDI-файла
+        flagFirstChordIsInList = False #флаг о том, что первый аккорд добавлен в список
+        previousChordAbsolute = 0 #абсолютное время предыдущего аккорда
+        for msgGroupKey, msgGroupValue in msgGroups.items(): #получить список аккордов (групп одновременных сообщений)
+            chord = Chord()
+            chord.msgs.extend(msgGroupValue) #записать в аккорд список одновременных сообщений из группы
+            if(flagFirstChordIsInList == False): #для первого аккорда
+                chord.delay = msgGroupKey
+                flagFirstChordIsInList = True
+            else:
+                chord.delay = msgGroupKey - previousChordAbsolute #задержка = разница между абсолютным временем аккордов
+            chords.append(chord)
+            previousChordAbsolute = msgGroupKey
+        listOfChords.append(chords) #добавить в список аккордов для всех входных MIDI-файлов
+    return roots, newTicksPerBeat, listOfChords
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
