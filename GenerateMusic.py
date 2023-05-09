@@ -3,10 +3,10 @@ import mido
 import os
 import statistics
 
+from ExtendendMessage import ExtendendMessage
 from Chord import Chord
 from ListOfChords import ListOfChords
 from Node import Node
-from ExtendendMessage import ExtendendMessage
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat
@@ -52,10 +52,12 @@ def BuildGrammar(midis): #Построение контестно-зависим
                         break
         # убрать сообщения выключения ноты, так как инфо о длительности звучания хранится у сообщ-ий включения ноты
         messages = [m for m in messages if m.msg.type!='note_off']
-        
+        msgGroups = {}
+        for m in messages: #сгруппировать сообщения по абсолютному времени в словарь (ключ - абсолютное время)
+            msgGroups.setdefault(m.absolute, []).append(m)
+        del messages
         #for m in messages: ###убрать в итоговой версии
            #print('[', m.msg, 'абс=', m.absolute, 'длит=', m.duration, ']') ###убрать в итоговой версии
-        ##############
     return roots, newTicksPerBeat
 
 midiList = [] #Список исходных MIDI-файлов для генерации
