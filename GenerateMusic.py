@@ -1,5 +1,5 @@
-import PySimpleGUI as sg
-import mido
+import PySimpleGUI as sg        #версия 4.61.0.173
+import mido                     #версия 1.2.10
 import os
 import statistics
 
@@ -8,8 +8,7 @@ from Chord import Chord
 from Node import Node
 
 midiFormat = '.mid'
-format0FilenameEnd = '_format_0' + midiFormat
-resultFilenameEnd = '_result' + midiFormat
+format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
 
 def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
     midiType1 = mido.MidiFile(midiType1FilePath)
@@ -17,7 +16,6 @@ def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из ф
     midiType0 = mido.MidiFile(type = 0, ticks_per_beat=midiType1.ticks_per_beat)
     midiType0.tracks.append(midiType0Tracks)
     filename = midiType1FilePath.removesuffix(midiFormat) + format0FilenameEnd
-    #print(midiType0.tracks) ###убрать в итоговой версии
     midiType0.save(filename)
     return filename
 
@@ -29,15 +27,15 @@ def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
-    #############################
     outputMidi.save(newFileNamePath)
 
 def BuildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
-    newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #темп = среднеарифм. среди MIDI
-    listOfChords = [] #список аккордов для всех входных MIDI-файлов
+    newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #такт = среднеарифм. среди MIDI
+    listOfChords = [] #список аккордов всех входных MIDI-файлов
     for midi in midis:
-        messages = [ExtendendMessage(m) for m in midi.tracks[0] if m.is_meta == False] #все сообщения трека (кроме мета-)
+        messages = [ExtendendMessage(m) for m in midi.tracks[0] if (m.is_meta == False)
+                    or (m.is_meta == True and m.type=='set_tempo')] #все сообщения трека (кроме мета- и изменения темпа)
         absoluteTime=0
         for m in messages:
             absoluteTime = absoluteTime + m.msg.time
@@ -69,7 +67,7 @@ def BuildGrammar(midis): #Построение контестно-зависим
                 chord.delay = msgGroupKey - previousChordAbsolute #задержка = разница между абсолютным временем аккордов
             chords.append(chord)
             previousChordAbsolute = msgGroupKey
-        listOfChords.append(chords) #добавить в список аккордов для всех входных MIDI-файлов
+        listOfChords.append(chords) #добавить в список аккордов всех входных MIDI-файлов
     return roots, newTicksPerBeat, listOfChords
 
 midiList = [] #Список исходных MIDI-файлов для генерации
