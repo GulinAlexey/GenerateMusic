@@ -5,7 +5,8 @@ import statistics
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
-from Node import Node
+from ChordComparison import chordsAreEqual
+from GrammarNode import GrammarNode
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
@@ -19,17 +20,17 @@ def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из ф
     midiType0.save(filename)
     return filename
 
-def MidiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Генерация нового MIDI-файла
+def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Генерация нового MIDI-файла
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path))
-    grammar, newTicksPerBeat, listOfChords = BuildGrammar(inputMidis)
+    grammar, newTicksPerBeat, listOfChords = buildGrammar(inputMidis)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
     outputMidi.save(newFileNamePath)
 
-def BuildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
+def buildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #такт = среднеарифм. среди MIDI
     listOfChords = [] #список аккордов всех входных MIDI-файлов
@@ -40,11 +41,11 @@ def BuildGrammar(midis): #Построение контестно-зависим
         for m in messages:
             absoluteTime = absoluteTime + m.msg.time
             m.absolute = absoluteTime #получить абсолютное время для сообщения
-            if(m.msg.type == 'note_off'): #найти сообщение начала звучания ноты и записать для неё длительность
+            if m.msg.type == 'note_off': #найти сообщение начала звучания ноты и записать для неё длительность
                 messagesBeforeThisMsg = list(reversed(messages[:(messages.index(m))]))
                 for msgBefore in messagesBeforeThisMsg:
-                    if(msgBefore.msg.type == 'note_on' and msgBefore.msg.channel == m.msg.channel
-                            and msgBefore.msg.note == m.msg.note):
+                    if msgBefore.msg.type == 'note_on' and msgBefore.msg.channel == m.msg.channel \
+                            and msgBefore.msg.note == m.msg.note:
                         messages[messages.index(m)-(messagesBeforeThisMsg.index(msgBefore))-1].duration = \
                             m.absolute - msgBefore.absolute    #записать длительность звучания ноты
                         break
@@ -60,7 +61,7 @@ def BuildGrammar(midis): #Построение контестно-зависим
         for msgGroupKey, msgGroupValue in msgGroups.items(): #получить список аккордов (групп одновременных сообщений)
             chord = Chord()
             chord.msgs.extend(msgGroupValue) #записать в аккорд список одновременных сообщений из группы
-            if(flagFirstChordIsInList == False): #для первого аккорда
+            if flagFirstChordIsInList == False: #для первого аккорда
                 chord.delay = msgGroupKey
                 flagFirstChordIsInList = True
             else:
@@ -68,6 +69,15 @@ def BuildGrammar(midis): #Построение контестно-зависим
             chords.append(chord)
             previousChordAbsolute = msgGroupKey
         listOfChords.append(chords) #добавить в список аккордов всех входных MIDI-файлов
+        uniqueChords = []  # список уникальных аккордов
+        for chord in chords: #получить список уникальных аккордов (без учёта абсолютного времени сообщений)
+            flagChordInUniqueChords = False
+            for uChord in uniqueChords:
+                if chordsAreEqual(chord, uChord):
+                    flagChordInUniqueChords = True
+                    break
+            if flagChordInUniqueChords == False:
+                uniqueChords.append(chord)
     return roots, newTicksPerBeat, listOfChords
 
 midiList = [] #Список исходных MIDI-файлов для генерации
@@ -113,7 +123,7 @@ while True:                             #The Event Loop
             duration = int(partitionOfDuration[0])
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
-        MidiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
+        midiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
         for midi0 in midiFilesType0Paths: #Удалить промежуточные файлы
             os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True, background_color='#1a263c',
