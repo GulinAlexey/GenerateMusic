@@ -76,9 +76,26 @@ def buildGrammar(midis): #Построение контестно-зависим
                 if chordsAreEqual(chord, uChord):
                     flagChordInUniqueChords = True
                     break
-            if flagChordInUniqueChords == False:
+            if flagChordInUniqueChords == False: #добавить аккорд в список уникальных, если его там ещё нет
                 uniqueChords.append(chord)
+        for uniqueChord in uniqueChords: #построить грамматику
+            flagThisChordIsInRootsAlready = False
+            root = None
+            for r in roots:
+                if len(r.value)>0:
+                    if chordsAreEqual(r.value[0], uniqueChord): #если такой корень-аккорд уже есть (из другого MIDI-файла)
+                        root = r
+                        flagThisChordIsInRootsAlready = True
+                        break
+            if flagThisChordIsInRootsAlready == False: #новое дерево, корнем служит уникальный аккорд
+                root = GrammarNode()
+                roots.append(root)
+                root.value.append(uniqueChord)
+            buildGrammarNode(root, chords) #построить правила грамматики
     return roots, newTicksPerBeat, listOfChords
+
+def buildGrammarNode(root, chords): #Построить правила для контекстно-зависимой грамматики по аккордам
+    return
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
@@ -125,7 +142,8 @@ while True:                             #The Event Loop
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
         midiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
         for midi0 in midiFilesType0Paths: #Удалить промежуточные файлы
-            os.remove(midi0)
+            if os.path.isfile(midi0): #защита от попытки удаления несуществующего файла
+                os.remove(midi0)
         sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True, background_color='#1a263c',
                  any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
         if values['OpenAfterGeneration'] == True: #Открыть созданный файл, если отмечен checkbox
