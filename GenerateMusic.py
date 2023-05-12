@@ -32,7 +32,7 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Г�
     outputMidi.tracks.append(outputTrack)
     outputMidi.save(newFileNamePath)
 
-def buildGrammar(midis): #Построение контестно-зависимой грамматики по MIDI-файлам (формата 0)
+def buildGrammar(midis): #Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #такт = среднеарифм. среди MIDI
     listOfChords = [] #список аккордов всех входных MIDI-файлов
@@ -115,10 +115,32 @@ def buildGrammarNode(root, chords): #Построить правила для К
     if len(followingChords) == 0: #достигнут конец списка всех аккордов, все правила построены
         return
     if len(followingChords) > 1: #несколько возможных вариантов аккордов (продукции) после данной последовательности
-        pass
-    else: #только один возможный вариант аккорда после последовательности,добавить его в словарь продукции, если его ещё нет
-        #if followingChords[0] not in
-        pass
+        # получить список, показывающий, какой аккорд может быть перед данной последовательностью
+        previousChords = getPreviousChords(root.value, chords)
+        newNodes = [] #новые узлы
+        for previousChord in previousChords: #создать новые узлы со значением предшествующ. + текущая последовательность
+            newSequence = []
+            newSequence.append(previousChord) #расширение контекста на 1 аккорд
+            newSequence.extend(root.value)
+            newFollowingChords = getFollowingChords(newSequence, chords) #получить продукции для новой последовательности
+            #найти, есть ли уже узел с такой последовательностью (newSequence) далее в дереве
+            nodesWithThisSequenceValue = [node for node in root.nextNodes.values() if node != None and
+                chordSequencesAreEqual(node.value, newSequence)]
+            if len(nodesWithThisSequenceValue) == 0: #если узла с такой последовательностью ещё нет, создать
+                nodeWithSequence = GrammarNode()
+                nodeWithSequence.value = newSequence
+            else: #если узел с такой последовательностью уже есть, выбрать его
+                nodeWithSequence = nodesWithThisSequenceValue[0]
+            for newFollowingChord in newFollowingChords: #добавить только новые продукции
+                if newFollowingChord not in root.nextNodes.keys():
+                    root.nextNodes[newFollowingChord] = nodeWithSequence
+                    newNodes.append(nodeWithSequence)
+        for node in list(set(newNodes)): #продолжить строить правила для каждого нового узла
+            buildGrammarNode(node, chords)
+    else: #только один возможный вариант аккорда после последовательности, добавить его в словарь продукции, если его ещё нет
+        if followingChords[0] not in root.nextNodes.keys():
+            #следующий узел пуст, так как при единственной продукции расширение контекста не требуется
+            root.nextNodes[followingChords[0]] = None
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
