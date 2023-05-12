@@ -7,6 +7,7 @@ from ExtendendMessage import ExtendendMessage
 from Chord import Chord
 from ChordComparison import chordsAreEqual
 from GrammarNode import GrammarNode
+from ChordSequenceComparison import chordSequencesAreEqual
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
@@ -94,8 +95,32 @@ def buildGrammar(midis): #Построение контестно-зависим
             buildGrammarNode(root, chords) #построить правила грамматики
     return roots, newTicksPerBeat, listOfChords
 
-def buildGrammarNode(root, chords): #Построить правила для контекстно-зависимой грамматики по аккордам
-    return
+def getPreviousChords(chordSequence, allChords): #возможные аккорды перед данной последовательностью аккордов
+    previousChords = []
+    for chord in allChords[:len(allChords)-len(chordSequence)]:
+        if chordSequencesAreEqual(chordSequence,
+                allChords[allChords.index(chord)+1:allChords.index(chord)+1+len(chordSequence)]):
+            previousChords.append(chord)
+    return previousChords
+
+def getFollowingChords(chordSequence, allChords): #возможные аккорды после данной последовательности аккордов
+    followingChords = []
+    for chord in allChords:
+        indexOfFollowingChord = allChords.index(chord)+len(chordSequence)
+        if indexOfFollowingChord >= len(allChords):
+            break
+        if  chordSequencesAreEqual(chordSequence, allChords[allChords.index(chord):indexOfFollowingChord]):
+            followingChords.append(allChords[indexOfFollowingChord])
+    return followingChords
+
+def buildGrammarNode(root, chords): #Построить правила для КЗ-грамматики для аккордов данной последовательности (root)
+    #получить список, показывающий, какой аккорд может быть после данной последовательности
+    followingChords = getFollowingChords(root.value, chords)
+    print(len(followingChords))
+    if len(followingChords) == 0: #достигнут конец списка всех аккордов, все правила построены
+        return
+    #if len(followingChords) > 1:
+    #else:
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
