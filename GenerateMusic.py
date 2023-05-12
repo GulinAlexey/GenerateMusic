@@ -5,6 +5,7 @@ import statistics
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
+from UniqueChordAdding import appendUniqueChord
 from ChordComparison import chordsAreEqual
 from GrammarNode import GrammarNode
 from ChordSequenceComparison import chordSequencesAreEqual
@@ -72,13 +73,7 @@ def buildGrammar(midis): #Построение контестно-зависим
         listOfChords.append(chords) #добавить в список аккордов всех входных MIDI-файлов
         uniqueChords = []  # список уникальных аккордов
         for chord in chords: #получить список уникальных аккордов (без учёта абсолютного времени сообщений)
-            flagChordInUniqueChords = False
-            for uChord in uniqueChords:
-                if chordsAreEqual(chord, uChord):
-                    flagChordInUniqueChords = True
-                    break
-            if flagChordInUniqueChords == False: #добавить аккорд в список уникальных, если его там ещё нет
-                uniqueChords.append(chord)
+            appendUniqueChord(chord, uniqueChords) #добавить аккорд в список уникальных, если его там ещё нет
         for uniqueChord in uniqueChords: #построить грамматику
             flagThisChordIsInRootsAlready = False
             root = None
@@ -100,7 +95,7 @@ def getPreviousChords(chordSequence, allChords): #возможные аккор�
     for chord in allChords[:len(allChords)-len(chordSequence)]:
         if chordSequencesAreEqual(chordSequence,
                 allChords[allChords.index(chord)+1:allChords.index(chord)+1+len(chordSequence)]):
-            previousChords.append(chord)
+            appendUniqueChord(chord, previousChords) #доб. аккорд в список, если его там ещё нет
     return previousChords
 
 def getFollowingChords(chordSequence, allChords): #возможные аккорды после данной последовательности аккордов
@@ -110,17 +105,20 @@ def getFollowingChords(chordSequence, allChords): #возможные аккор
         if indexOfFollowingChord >= len(allChords):
             break
         if  chordSequencesAreEqual(chordSequence, allChords[allChords.index(chord):indexOfFollowingChord]):
-            followingChords.append(allChords[indexOfFollowingChord])
+            # доб. аккорд в список, если его там ещё нет
+            appendUniqueChord(allChords[indexOfFollowingChord], followingChords)
     return followingChords
 
 def buildGrammarNode(root, chords): #Построить правила для КЗ-грамматики для аккордов данной последовательности (root)
     #получить список, показывающий, какой аккорд может быть после данной последовательности
     followingChords = getFollowingChords(root.value, chords)
-    print(len(followingChords))
     if len(followingChords) == 0: #достигнут конец списка всех аккордов, все правила построены
         return
-    #if len(followingChords) > 1:
-    #else:
+    if len(followingChords) > 1: #несколько возможных вариантов аккордов (продукции) после данной последовательности
+        pass
+    else: #только один возможный вариант аккорда после последовательности,добавить его в словарь продукции, если его ещё нет
+        #if followingChords[0] not in
+        pass
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 
@@ -134,8 +132,8 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
-    [sg.Text('Лог работы:')], ###убрать в итоговой версии
-    [sg.Output(size=(73, 10))], ###убрать в итоговой версии
+    [sg.Text('Лог работы:')], ### TODO: убрать в итоговой версии
+    [sg.Output(size=(73, 10))], ### TODO: убрать в итоговой версии
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
