@@ -9,6 +9,7 @@ from UniqueChordAdding import appendUniqueChord
 from ChordComparison import chordsAreEqual
 from GrammarNode import GrammarNode
 from ChordSequenceComparison import chordSequencesAreEqual
+from GettingOfChordSequenceDurationInSeconds import getChordSequenceDurationInSeconds
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
@@ -30,13 +31,14 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
     grammar, newTicksPerBeat, listOfChordLists = buildGrammar(inputMidis) #построить КЗ-грамматику
     # начальная последовательность состоит из первых аккордов входных файлов
-    initialSequence = [chordList[0] for chordList in listOfChordLists]
-    #создать новую последовательность MIDI-сообщений
-    generatedSequence = produceNewMidi(initialSequence, grammar, newDurationSeconds, listOfChordLists)
+    initialChordSequence = [chordList[0] for chordList in listOfChordLists]
+    #создать новую последовательность аккордов
+    generatedChordSequence = produceNewMidi(initialChordSequence, grammar, newDurationSeconds,
+                                            newTicksPerBeat, listOfChordLists)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
-    #outputTrack.extend(generatedSequence) #TODO: временное решение. Сделать перенос из последовательности с учётом note_off
+    #outputTrack.extend(generatedChordSequence) #TODO: Сделать перенос нот из последовательности с учётом note_off
     outputMidi.save(newFileNamePath) #сохранить файл
     window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
@@ -150,11 +152,14 @@ def buildGrammarNode(root, chords): #Построить правила для К
             #следующий узел пуст, так как при единственной продукции расширение контекста не требуется
             root.nextNodes[followingChords[0]] = None
 
-#создать новую последовательность MIDI-сообщений
-def produceNewMidi(initialSequence, grammar, durationSeconds, listOfChordLists):
-    generatedSequence = []
-    ####TODO: код функции
-    return generatedSequence
+#создать новую последовательность аккордов из MIDI-сообщений
+def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists):
+    generatedChordSequence = []
+    generatedChordSequence.extend(initialChordSequence) #текущая последовательность равна начальной
+    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) < durationSeconds: #пока длительность меньше заданной, добавлять продуцированные сообщения
+        pass
+        ####TODO: код функции
+    return generatedChordSequence
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
@@ -216,7 +221,8 @@ while True:                             #The Event Loop
                     str = ''.join(str.rsplit(':', 1))
                     window['Duration'].update(str)
                     colonCount = colonCount - 1
-    if event == 'Generate' and midiList and values['NewFilePath'] and values['Duration']: #Генерация файла
+    if event == 'Generate' and midiList and values['NewFilePath'] \
+            and values['Duration'] and values['Duration'][0]!=':': #Генерация файла
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
@@ -249,7 +255,7 @@ while True:                             #The Event Loop
         sg.popup('Не указан путь сохранения файла, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
-    if event == 'Generate' and not values['Duration']:
+    if event == 'Generate' and (not values['Duration'] or values['Duration'][0]==':'):
         sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
