@@ -12,25 +12,28 @@ from ChordSequenceComparison import chordSequencesAreEqual
 
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
+popupBackgroundColor = '#1a263c'
 
 def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
-    midiType1 = mido.MidiFile(midiType1FilePath)
-    midiType0Tracks = mido.merge_tracks(midiType1.tracks)
+    midiType1 = mido.MidiFile(midiType1FilePath) #считать файл в переменную
+    midiType0Tracks = mido.merge_tracks(midiType1.tracks) #объединить все треки в файле в один
     midiType0 = mido.MidiFile(type = 0, ticks_per_beat=midiType1.ticks_per_beat)
     midiType0.tracks.append(midiType0Tracks)
     filename = midiType1FilePath.removesuffix(midiFormat) + format0FilenameEnd
-    midiType0.save(filename)
+    midiType0.save(filename) #сохранить файл
     return filename
 
-def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds): #Генерация нового MIDI-файла
+#Генерация нового MIDI-файла (в отдельном потоке)
+def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, window):
     inputMidis = []
     for path in midiType0FilesPaths:
-        inputMidis.append(mido.MidiFile(path))
-    grammar, newTicksPerBeat, listOfChords = buildGrammar(inputMidis)
+        inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
+    grammar, newTicksPerBeat, listOfChords = buildGrammar(inputMidis) #построить КЗ-грамматику
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
-    outputMidi.save(newFileNamePath)
+    outputMidi.save(newFileNamePath) #сохранить файл
+    window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
 def buildGrammar(midis): #Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
@@ -143,6 +146,7 @@ def buildGrammarNode(root, chords): #Построить правила для К
             root.nextNodes[followingChords[0]] = None
 
 midiList = [] #Список исходных MIDI-файлов для генерации
+midiFilesType0Paths = [] #Список MIDI-файлов формата 0
 
 #интерфейс
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
@@ -151,7 +155,7 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.Button('Удалить', key='DeleteFile'), sg.Button('Очистить', key='ClearFiles')],
     [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
     [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', size=(34,1)),
-    sg.FileSaveAs('Сохранить как', file_types=(('MIDI files', '*.mid'),))],
+    sg.FileSaveAs('Сохранить как', key='SaveAsButton', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
     [sg.Text('Лог работы:')], ### TODO: убрать в итоговой версии
@@ -160,6 +164,17 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
 window = sg.Window('Генерация музыки', layout, icon='app_icon.ico') #Окно программы
+
+def updateWindowElementsDisabled(state): #изменить состояние элементов интерфейса: недоступны (True) или доступны (False)
+    window['InputFile'].update(disabled=state)
+    window['DeleteFile'].update(disabled=state)
+    window['ClearFiles'].update(disabled=state)
+    window['MidiListView'].update(disabled=state)
+    window['NewFilePath'].update(disabled=state)
+    window['SaveAsButton'].update(disabled=state)
+    window['Duration'].update(disabled=state)
+    window['Generate'].update(disabled=state)
+
 while True:                             #The Event Loop
     event, values = window.read()
     if event in (None, 'Exit', 'Cancel'): #Выход из программы
@@ -185,23 +200,31 @@ while True:                             #The Event Loop
             duration = int(partitionOfDuration[0])
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
-        midiGenerate(midiFilesType0Paths, values['NewFilePath'], duration)
-        for midi0 in midiFilesType0Paths: #Удалить промежуточные файлы
-            if os.path.isfile(midi0): #защита от попытки удаления несуществующего файла
-                os.remove(midi0)
-        sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar = True, background_color='#1a263c',
-                 any_key_closes = True, grab_anywhere = True, button_justification= 'centered')
-        if values['OpenAfterGeneration'] == True: #Открыть созданный файл, если отмечен checkbox
-            os.system(values['NewFilePath'])
+        updateWindowElementsDisabled(True) #сделать элементы интерфейса неактивными
+        #запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
+        window.start_thread(lambda: midiGenerate(midiFilesType0Paths, values['NewFilePath'],
+                                                      duration, window), ('threadMidiGenerate', 'threadMidiGenerateEnded'))
+    if event[0] == 'threadMidiGenerate':
+        if event[1] == 'Complete':
+            for midi0 in midiFilesType0Paths:  # Удалить промежуточные файлы
+                if os.path.isfile(midi0):  # защита от попытки удаления несуществующего файла
+                    os.remove(midi0)
+            updateWindowElementsDisabled(False)  # сделать элементы интерфейса неактивными
+            sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
+                     any_key_closes=True, grab_anywhere=True, button_justification='centered')
+            if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
+                os.system(values['NewFilePath'])
+        else: ###TODO: убрать в итоговой версии
+            print(event[1]) ###TODO: убрать в итоговой версии
     if event == 'Generate' and not midiList:
         sg.popup('Список исходных MIDI-файлов пуст, проверьте входные данные',
-                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
     if event == 'Generate' and not values['NewFilePath']:
         sg.popup('Не указан путь сохранения файла, проверьте входные данные',
-                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
     if event == 'Generate' and not values['Duration']:
         sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
-                keep_on_top=True, no_titlebar=True, background_color='#1a263c',
+                keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
