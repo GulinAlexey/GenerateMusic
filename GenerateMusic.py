@@ -31,10 +31,9 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
     grammar, newTicksPerBeat, listOfChordLists = buildGrammar(inputMidis) #построить КЗ-грамматику
     # начальная последовательность состоит из первых аккордов входных файлов
-    initialChordSequence = [chordList[0] for chordList in listOfChordLists]
     #создать новую последовательность аккордов
-    generatedChordSequence = produceNewMidi(initialChordSequence, grammar, newDurationSeconds,
-                                            newTicksPerBeat, listOfChordLists)
+    generatedChordSequence = produceNewMidi([chordList[0] for chordList in listOfChordLists],
+                                            grammar, newDurationSeconds, newTicksPerBeat, listOfChordLists)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
@@ -154,10 +153,11 @@ def buildGrammarNode(root, chords): #Построить правила для К
 
 #создать новую последовательность аккордов из MIDI-сообщений
 def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists):
-    generatedChordSequence = []
-    generatedChordSequence.extend(initialChordSequence) #текущая последовательность равна начальной
-    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) < durationSeconds: #пока длительность меньше заданной, добавлять продуцированные сообщения
-        pass
+    generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
+    # пока длительность меньше заданной, добавлять продуцированные сообщения
+    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) < durationSeconds:
+        lastChord = generatedChordSequence[-1]
+        #найти дерево грамматики для последнего аккорда в последовательности
         ####TODO: код функции
     return generatedChordSequence
 
