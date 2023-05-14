@@ -155,9 +155,11 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     enable_events=True, file_types=(('MIDI files', '*.mid'),))]]),
     sg.Button('Удалить', key='DeleteFile'), sg.Button('Очистить', key='ClearFiles')],
     [sg.Listbox(midiList, size=(73,10), enable_events=True,  key='MidiListView')],
-    [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', size=(34,1)),
+    [sg.Text('Имя генерируемого файла: '), sg.InputText(key = 'NewFilePath', disabled=True,
+                                                        disabled_readonly_background_color='#b7b7b7', size=(34,1)),
     sg.FileSaveAs('Сохранить как', key='SaveAsButton', file_types=(('MIDI files', '*.mid'),))],
-    [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
+    [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', disabled_readonly_background_color='#b7b7b7',
+                                                         size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
     [sg.Push(), sg.Text('Запущен процесс генерации. Ожидайте завершения процесса...', font = 'Helvetica 13',
         visible = False, key='pleaseWait'), sg.Push()],
@@ -171,7 +173,6 @@ def updateWindowElementsDisabled(state): #изменить состояние э
     window['DeleteFile'].update(disabled=state)
     window['ClearFiles'].update(disabled=state)
     window['MidiListView'].update(disabled=state)
-    window['NewFilePath'].update(disabled=state)
     window['SaveAsButton'].update(disabled=state)
     window['Duration'].update(disabled=state)
     window['Generate'].update(disabled=state)
