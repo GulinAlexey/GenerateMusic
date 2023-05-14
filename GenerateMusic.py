@@ -160,6 +160,8 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
     [sg.Text('Лог работы:')], ### TODO: убрать в итоговой версии
     [sg.Output(size=(73, 10))], ### TODO: убрать в итоговой версии
+    [sg.Push(), sg.Text('Запущен процесс генерации. Ожидайте завершения процесса...', font = 'Helvetica 13',
+        visible = False, key='pleaseWait'), sg.Push()],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
@@ -178,6 +180,9 @@ def updateWindowElementsDisabled(state): #изменить состояние э
 while True:                             #The Event Loop
     event, values = window.read()
     if event in (None, 'Exit', 'Cancel'): #Выход из программы
+        for midi0 in midiFilesType0Paths:  # Удалить промежуточные файлы
+            if os.path.isfile(midi0):  # защита от попытки удаления несуществующего файла
+                os.remove(midi0)
         break
     if event == 'InputFile': #Добавить MIDI-файл в список исходных файлов для генерации
         midiList.append(values['InputFile'])
@@ -201,6 +206,7 @@ while True:                             #The Event Loop
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
         updateWindowElementsDisabled(True) #сделать элементы интерфейса неактивными
+        window['pleaseWait'].update(visible=True)
         #запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
         window.start_thread(lambda: midiGenerate(midiFilesType0Paths, values['NewFilePath'],
                                                       duration, window), ('threadMidiGenerate', 'threadMidiGenerateEnded'))
@@ -209,7 +215,8 @@ while True:                             #The Event Loop
             for midi0 in midiFilesType0Paths:  # Удалить промежуточные файлы
                 if os.path.isfile(midi0):  # защита от попытки удаления несуществующего файла
                     os.remove(midi0)
-            updateWindowElementsDisabled(False)  # сделать элементы интерфейса неактивными
+            window['pleaseWait'].update(visible=False)
+            updateWindowElementsDisabled(False)  # сделать элементы интерфейса активными
             sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
