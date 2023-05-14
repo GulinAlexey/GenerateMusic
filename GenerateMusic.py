@@ -28,18 +28,22 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
-    grammar, newTicksPerBeat, listOfChords = buildGrammar(inputMidis) #построить КЗ-грамматику
-    #######
+    grammar, newTicksPerBeat, listOfChordLists = buildGrammar(inputMidis) #построить КЗ-грамматику
+    # начальная последовательность состоит из первых аккордов входных файлов
+    initialSequence = [chordList[0] for chordList in listOfChordLists]
+    #создать новую последовательность MIDI-сообщений
+    generatedSequence = produceNewMidi(initialSequence, grammar, newDurationSeconds, listOfChordLists)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
+    #outputTrack.extend(generatedSequence) #TODO: временное решение. Сделать перенос из последовательности с учётом note_off
     outputMidi.save(newFileNamePath) #сохранить файл
     window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
 def buildGrammar(midis): #Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #такт = среднеарифм. среди MIDI
-    listOfChords = [] #список аккордов всех входных MIDI-файлов
+    listOfChordLists = [] #список аккордов всех входных MIDI-файлов (для каждого файла свой список)
     for midi in midis:
         messages = [ExtendendMessage(m) for m in midi.tracks[0] if (m.is_meta == False)
                     or (m.is_meta == True and m.type=='set_tempo')] #все сообщения трека (кроме мета- и изменения темпа)
@@ -74,7 +78,7 @@ def buildGrammar(midis): #Построение контекстно-зависи
                 chord.delay = msgGroupKey - previousChordAbsolute #задержка = разница между абсолютным временем аккордов
             chords.append(chord)
             previousChordAbsolute = msgGroupKey
-        listOfChords.append(chords) #добавить в список аккордов всех входных MIDI-файлов
+        listOfChordLists.append(chords) #добавить в список аккордов всех входных MIDI-файлов
         uniqueChords = []  # список уникальных аккордов
         for chord in chords: #получить список уникальных аккордов (без учёта абсолютного времени сообщений)
             appendUniqueChord(chord, uniqueChords) #добавить аккорд в список уникальных, если его там ещё нет
@@ -92,7 +96,7 @@ def buildGrammar(midis): #Построение контекстно-зависи
                 roots.append(root)
                 root.value.append(uniqueChord)
             buildGrammarNode(root, chords) #построить правила грамматики
-    return roots, newTicksPerBeat, listOfChords
+    return roots, newTicksPerBeat, listOfChordLists
 
 def getPreviousChords(chordSequence, allChords): #возможные аккорды перед данной последовательностью аккордов
     previousChords = []
@@ -145,6 +149,12 @@ def buildGrammarNode(root, chords): #Построить правила для К
         if followingChords[0] not in root.nextNodes.keys():
             #следующий узел пуст, так как при единственной продукции расширение контекста не требуется
             root.nextNodes[followingChords[0]] = None
+
+#создать новую последовательность MIDI-сообщений
+def produceNewMidi(initialSequence, grammar, durationSeconds, listOfChordLists):
+    generatedSequence = []
+    ####TODO: код функции
+    return generatedSequence
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
