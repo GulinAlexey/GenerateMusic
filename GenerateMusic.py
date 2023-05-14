@@ -29,6 +29,7 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
     grammar, newTicksPerBeat, listOfChords = buildGrammar(inputMidis) #построить КЗ-грамматику
+    #######
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
@@ -158,8 +159,6 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.FileSaveAs('Сохранить как', key='SaveAsButton', file_types=(('MIDI files', '*.mid'),))],
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
-    [sg.Text('Лог работы:')], ### TODO: убрать в итоговой версии
-    [sg.Output(size=(73, 10))], ### TODO: убрать в итоговой версии
     [sg.Push(), sg.Text('Запущен процесс генерации. Ожидайте завершения процесса...', font = 'Helvetica 13',
         visible = False, key='pleaseWait'), sg.Push()],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
@@ -193,9 +192,19 @@ while True:                             #The Event Loop
     if event == 'ClearFiles': #Очистить список исходных файлов для генерации
         midiList.clear()
         window['MidiListView'].update(midiList)
-    if event == 'Duration' and values['Duration'] and values['Duration'][-1] not in ('0123456789:')\
-            or values['Duration'].count(':') > 1: #Защита ввода продолжительности, только цифры и одно ":"
-        window['Duration'].update(values['Duration'][:-1])
+    if event == 'Duration':
+        colonCount = 0
+        str = values['Duration']
+        for character in str: #Защита ввода продолжительности, только цифры и одно ":"
+            if character not in ('0123456789:'):
+                str = str.replace(character, '')
+                window['Duration'].update(str)
+            if character == ':':
+                colonCount = colonCount + 1
+                if colonCount > 1:
+                    str = ''.join(str.rsplit(':', 1))
+                    window['Duration'].update(str)
+                    colonCount = colonCount - 1
     if event == 'Generate' and midiList and values['NewFilePath'] and values['Duration']: #Генерация файла
         midiFilesType0Paths = []
         for midiElement in midiList:
@@ -221,8 +230,6 @@ while True:                             #The Event Loop
                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
                 os.system(values['NewFilePath'])
-        else: ###TODO: убрать в итоговой версии
-            print(event[1]) ###TODO: убрать в итоговой версии
     if event == 'Generate' and not midiList:
         sg.popup('Список исходных MIDI-файлов пуст, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
