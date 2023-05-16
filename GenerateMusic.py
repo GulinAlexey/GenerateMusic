@@ -158,7 +158,10 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
     while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) < durationSeconds:
         lastChord = generatedChordSequence[-1]
         #найти дерево грамматики для последнего аккорда в последовательности
-        ####TODO: код функции
+        grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
+        rule = grammarRules[0]
+        # добавить к текущей последовательности сгенерированный аккорд
+        generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists))
     return generatedChordSequence
 
 midiList = [] #Список исходных MIDI-файлов для генерации
