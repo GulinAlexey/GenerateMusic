@@ -76,4 +76,25 @@ class GrammarNode:
 
     #продолжить искать конечное правило для переданной последовательности
     def generateNextChordDeeper(self, baseSequence, pathFromRootToEnd, contextLevel):
-        pass #TODO код метода
+        pathFromRootToEnd.append(self) # добавить данный узел в рассматриваемую ветвь дерева грамматики
+        #порядок действий схож с методом generateNextChord()
+        if len(self.nextNodes) == 1 and list(self.nextNodes.values())[0] == None:
+            return #контекст максимально возможно расширен
+        if len(baseSequence) < contextLevel:
+            return
+        # расширить контекст до contextLevel аккордов в данной последовательности
+        extendedSequence = baseSequence[len(baseSequence) - contextLevel:]
+        # найти в подузлах правила для расширенного контекста
+        nodesWithExtendedSequence = []
+        for nodeKey, nodeValue in self.nextNodes.items():
+            if nodeValue != None:
+                if chordSequencesAreEqual(nodeValue.value, extendedSequence):
+                    appendUniqueChordSequence(nodeValue, nodesWithExtendedSequence)
+        # если правил для расширенного контекста не найдено, убрать данный узел из рассматриваемой ветви дерева грамматики
+        if len(nodesWithExtendedSequence) == 0:
+            pathFromRootToEnd.remove(self)
+            return
+        # правила для расширенного контекста были найдены
+        rule = nodesWithExtendedSequence[0] #правило для контекста
+        # найти более точное правило, увеличивая контекст
+        rule.generateNextChordDeeper(baseSequence, pathFromRootToEnd, contextLevel + 1)
