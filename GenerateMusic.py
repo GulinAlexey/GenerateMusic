@@ -37,7 +37,8 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
-    #outputTrack.extend(generatedChordSequence) #TODO: Сделать перенос нот из последовательности с учётом note_off
+    # перенести сообщения из последовательности аккордов в трек генерируемого MIDI-файла
+    moveMsgsFromChordsToTrack(generatedChordSequence, outputTrack)
     outputMidi.save(newFileNamePath) #сохранить файл
     window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
@@ -163,6 +164,15 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
         # добавить к текущей последовательности сгенерированный аккорд
         generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists))
     return generatedChordSequence
+
+# перенести сообщения из последовательности аккордов в трек
+def moveMsgsFromChordsToTrack(chordSequence, midiTrack):
+    for chord in chordSequence:
+        for msg in chord.msgs:
+            midiTrack.append(msg.msg)
+            if msg.msg.type == 'note_on' and msg.duration != 0:
+                pass #записать событие 'note_off' для этой ноты
+    #TODO код функции
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
