@@ -2,6 +2,7 @@ import PySimpleGUI as sg        #версия 4.61.0.173
 import mido                     #версия 1.2.10
 import os
 import statistics
+import copy
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
@@ -167,12 +168,32 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
 
 # перенести сообщения из последовательности аккордов в трек
 def moveMsgsFromChordsToTrack(chordSequence, midiTrack):
-    for chord in chordSequence:
-        for msg in chord.msgs:
-            midiTrack.append(msg.msg)
-            if msg.msg.type == 'note_on' and msg.duration != 0:
-                pass #записать событие 'note_off' для этой ноты
-    #TODO код функции
+    absoluteTime = 0 #время с начала трека
+    trackWithExtendedMsgs = [] #список сообщений для трека (объекты класса ExtendedMessage, с абсолютным временем)
+    for chord in chordSequence: #перебрать все аккорды
+        absoluteTime = absoluteTime + chord.delay #увеличить абс. время на задержку перед данным аккордом
+        for msg in chord.msgs: #перебрать сообщения в аккорде
+            AddingMsg = copy.copy(msg) #скопировать сообщение
+            msg.absolute = absoluteTime
+            trackWithExtendedMsgs.append(AddingMsg) #добавить сообщение в список
+            if AddingMsg.msg.type == 'note_on' and AddingMsg.duration !=0: #если данное сообщение - включение ноты
+                msgNoteOff = mido.Message('note_off', channel=AddingMsg.msg.channel,
+                                          note=AddingMsg.msg.note, velocity=0, time=0)
+                # доб. сообщение выключения ноты в список, абс.время = абс. время вкл. ноты + её длительность
+                trackWithExtendedMsgs.append(ExtendendMessage(msg=msgNoteOff, absolute=absoluteTime+AddingMsg.duration))
+    # отсортировать сообщения по возрастанию абсолютного времени
+    # (требуется, так как сообщения note_off расположены сразу после note_on)
+    trackWithExtendedMsgs.sort(key=lambda msg: msg.absolute)
+    #перенести сообщения из trackWithExtendedMsgs в итоговый трек с относительным временем вместо абсолютного
+    i = 0
+    for extendedMsg in trackWithExtendedMsgs:
+        newMsg = copy.copy(extendedMsg.msg)
+        if(i==0):
+            newMsg.time = extendedMsg.absolute
+        else:
+            newMsg.time = extendedMsg.absolute - trackWithExtendedMsgs[i-1].absolute
+        midiTrack.append(newMsg)
+        i = i + 1
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
