@@ -280,7 +280,7 @@ while True:                             #The Event Loop
             sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
-                os.system(values['NewFilePath'])
+                os.system('"'+values['NewFilePath']+'"')
     if event == 'Generate' and not midiList:
         sg.popup('Список исходных MIDI-файлов пуст, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
