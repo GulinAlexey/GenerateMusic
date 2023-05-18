@@ -3,6 +3,11 @@ from ChordComparison import chordsAreEqual
 from ChordSequenceComparison import chordSequencesAreEqual
 from UniqueChordSequenceAdding import appendUniqueChordSequence
 
+MinNearChordIndex = -10 #мин. индекс соседнего аккорда, если нужно взять случайный ближайший
+MaxNearChordIndex = 10 #макс. индекс соседнего аккорда, если нужно взять случайный ближайший
+EndRuleProbability = 0.6    #вероятность вернуть продукцию конечного правила
+                            # вместо случайной продукции случайного узла ветви дерева,
+                            # которая идет от корня до конечного правила
 class GrammarNode:
     'Узел дерева грамматики'
     def __init__(self):
@@ -35,8 +40,8 @@ class GrammarNode:
                             break
                     if flagBreak == True:
                         break
-                return chordListWithBaseLastChord[max(0, min(indexOfChordInList + random.randint(-10, 10),
-                                                             len(chordListWithBaseLastChord) - 1))]
+                return chordListWithBaseLastChord[max(0, min(indexOfChordInList +
+                       random.randint(MinNearChordIndex, MaxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
         #расширить контекст
         extendedSequence = baseSequence[len(baseSequence)-2:] #два последних аккорда в последовательности
         #найти в подузлах правила для расширенного контекста
@@ -63,8 +68,8 @@ class GrammarNode:
                             break
                     if flagBreak == True:
                         break
-                return chordListWithBaseLastChord[max(0, min(indexOfChordInList + random.randint(-10, 10),
-                                                             len(chordListWithBaseLastChord) - 1))]
+                return chordListWithBaseLastChord[max(0, min(indexOfChordInList +
+                       random.randint(MinNearChordIndex, MaxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
         #правила для расширенного контекста были найдены
         rule = nodesWithExtendedSequence[0] #правило для контекста
         rule.generateNextChordDeeper(baseSequence, pathFromRootToEnd, 3) #найти более точное правило, увеличивая контекст
