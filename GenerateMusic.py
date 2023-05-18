@@ -160,13 +160,16 @@ def buildGrammarNode(root, chords): #Построить правила для К
 def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists):
     generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
     # пока длительность меньше заданной, добавлять продуцированные сообщения
-    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) < durationSeconds:
+    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) <= durationSeconds:
         lastChord = generatedChordSequence[-1]
         #найти дерево грамматики для последнего аккорда в последовательности
         grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
         rule = grammarRules[0]
         # добавить к текущей последовательности сгенерированный аккорд
         generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists))
+    #убрать лишние аккорды, пока длительность не станет меньше или равна требуемой
+    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) > durationSeconds:
+        generatedChordSequence.pop()
     return generatedChordSequence
 
 # перенести сообщения из последовательности аккордов в трек
