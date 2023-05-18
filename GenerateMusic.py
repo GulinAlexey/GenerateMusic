@@ -4,6 +4,8 @@ import os
 import statistics
 import copy
 from itertools import groupby
+from datetime import datetime
+import time
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
@@ -16,6 +18,8 @@ from GettingOfChordSequenceDurationInSeconds import getChordSequenceDurationInSe
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
 popupBackgroundColor = '#1a263c'
+pleaseWaitText = 'Запущен процесс генерации. Ожидайте завершения процесса...\n' \
+                 '                            Время начала = '
 
 def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
     midiType1 = mido.MidiFile(midiType1FilePath) #считать файл в переменную
@@ -41,6 +45,9 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
     outputMidi.tracks.append(outputTrack)
     # перенести сообщения из последовательности аккордов в трек генерируемого MIDI-файла
     moveMsgsFromChordsToTrack(generatedChordSequence, outputTrack)
+    # убрать лишние аккорды, пока длительность не станет меньше или равна требуемой
+    while outputMidi.length > newDurationSeconds:
+        outputTrack.pop()
     outputMidi.save(newFileNamePath) #сохранить файл
     window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
@@ -167,9 +174,6 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
         rule = grammarRules[0]
         # добавить к текущей последовательности сгенерированный аккорд
         generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists))
-    #убрать лишние аккорды, пока длительность не станет меньше или равна требуемой
-    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) > durationSeconds:
-        generatedChordSequence.pop()
     return generatedChordSequence
 
 # перенести сообщения из последовательности аккордов в трек
@@ -203,6 +207,7 @@ def moveMsgsFromChordsToTrack(chordSequence, midiTrack):
 
 midiList = [] #Список исходных MIDI-файлов для генерации
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
+startTime = None
 
 #интерфейс
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
@@ -216,8 +221,7 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', disabled_readonly_background_color='#b7b7b7',
                                                          size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
-    [sg.Push(), sg.Text('Запущен процесс генерации. Ожидайте завершения процесса...', font = 'Helvetica 13',
-        visible = False, key='pleaseWait'), sg.Push()],
+    [sg.Push(), sg.Text(pleaseWaitText, font = 'Helvetica 13', visible = False, key='pleaseWait'), sg.Push()],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
@@ -263,6 +267,7 @@ while True:                             #The Event Loop
                     colonCount = colonCount - 1
     if event == 'Generate' and midiList and values['NewFilePath'] \
             and values['Duration'] and values['Duration'][0]!=':': #Генерация файла
+        startTime = datetime.now()
         midiFilesType0Paths = []
         for midiElement in midiList:
             midiFilesType0Paths.append(convertType1ToType0(midiElement))
@@ -272,6 +277,7 @@ while True:                             #The Event Loop
         else:
             duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
         updateWindowElementsDisabled(True) #сделать элементы интерфейса неактивными
+        window['pleaseWait'].update(pleaseWaitText + startTime.strftime("%H:%M:%S"))
         window['pleaseWait'].update(visible=True)
         #запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
         window.start_thread(lambda: midiGenerate(midiFilesType0Paths, values['NewFilePath'],
@@ -283,7 +289,12 @@ while True:                             #The Event Loop
                     os.remove(midi0)
             window['pleaseWait'].update(visible=False)
             updateWindowElementsDisabled(False)  # сделать элементы интерфейса активными
-            sg.popup('Успешно сгенерировано', keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
+            endTime = datetime.now()
+            deltaTime = endTime - startTime
+            sg.popup('         Успешно сгенерировано\n\nВремя начала = ' + startTime.strftime("%H:%M:%S") +
+                     '\nВремя завершения = ' + endTime.strftime("%H:%M:%S") +
+                     '\nБыло потрачено времени = ' + time.strftime("%H:%M:%S", time.gmtime(deltaTime.total_seconds())),
+            keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
                 os.system('"'+values['NewFilePath']+'"')
