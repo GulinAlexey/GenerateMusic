@@ -18,8 +18,16 @@ from GettingOfChordSequenceDurationInSeconds import getChordSequenceDurationInSe
 midiFormat = '.mid'
 format0FilenameEnd = '_format_0' + midiFormat #конец имени промежуточного файла - конвертированного исходного в формат 0
 popupBackgroundColor = '#1a263c'
+icon_name = 'app_icon.ico'
 pleaseWaitText = 'Запущен процесс генерации. Ожидайте завершения процесса...\n' \
                  '                            Время начала = '
+
+#значения по умолчанию:
+defaultMinNearChordIndex = -10 #мин. индекс соседнего аккорда, если нужно взять случайный ближайший
+defaultMaxNearChordIndex = 10 #макс. индекс соседнего аккорда, если нужно взять случайный ближайший
+defaultEndRuleProbability = 0.6     #вероятность вернуть продукцию конечного правила
+                                    # вместо случайной продукции случайного узла ветви дерева,
+                                    # которая идет от корня до конечного правила
 
 def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
     midiType1 = mido.MidiFile(midiType1FilePath) #считать файл в переменную
@@ -31,7 +39,8 @@ def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из ф
     return filename
 
 #Генерация нового MIDI-файла (в отдельном потоке)
-def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, window):
+def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, minNearChordIndex, maxNearChordIndex,
+                 endRuleProbability, window):
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
@@ -39,7 +48,8 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, windo
     # начальная последовательность состоит из первых аккордов входных файлов
     #создать новую последовательность аккордов
     generatedChordSequence = produceNewMidi([chordList[0] for chordList in listOfChordLists],
-                                            grammar, newDurationSeconds, newTicksPerBeat, listOfChordLists)
+                                            grammar, newDurationSeconds, newTicksPerBeat, listOfChordLists,
+                                            minNearChordIndex, maxNearChordIndex, endRuleProbability)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
@@ -164,7 +174,8 @@ def buildGrammarNode(root, chords): #Построить правила для К
             root.nextNodes[followingChords[0]] = None
 
 #создать новую последовательность аккордов из MIDI-сообщений
-def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists):
+def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists,
+                   minNearChordIndex, maxNearChordIndex, endRuleProbability):
     generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
     # пока длительность меньше заданной, добавлять продуцированные сообщения
     while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) <= durationSeconds:
@@ -173,7 +184,8 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
         grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
         rule = grammarRules[0]
         # добавить к текущей последовательности сгенерированный аккорд
-        generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists))
+        generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists,
+                                                             minNearChordIndex, maxNearChordIndex, endRuleProbability))
     return generatedChordSequence
 
 # перенести сообщения из последовательности аккордов в трек
@@ -209,6 +221,13 @@ midiList = [] #Список исходных MIDI-файлов для генер
 midiFilesType0Paths = [] #Список MIDI-файлов формата 0
 startTime = None
 
+#текущие значения:
+currentMinNearChordIndex = defaultMinNearChordIndex #мин. индекс соседнего аккорда, если нужно взять случайный ближайший
+currentMaxNearChordIndex = defaultMaxNearChordIndex #макс. индекс соседнего аккорда, если нужно взять случайный ближайший
+currentEndRuleProbability = defaultEndRuleProbability       #вероятность вернуть продукцию конечного правила
+                                                            # вместо случайной продукции случайного узла ветви дерева,
+                                                            # которая идет от корня до конечного правила
+
 #интерфейс
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     sg.Column([[sg.FileBrowse('Добавить',key='InputFile',
@@ -221,11 +240,13 @@ layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
     [sg.Text('Длительность нового трека:'), sg.InputText(key='Duration', disabled_readonly_background_color='#b7b7b7',
                                                          size=(34,1), enable_events=True)],
     [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
+    [sg.Button('Доп. настройки', key='SettingsButton')],
     [sg.Push(), sg.Text(pleaseWaitText, font = 'Helvetica 13', visible = False, key='pleaseWait'), sg.Push()],
     [sg.Push(), sg.Submit('Генерировать', key='Generate'),
     sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
 ]
-window = sg.Window('Генерация музыки', layout, icon='app_icon.ico') #Окно программы
+
+window = sg.Window('Генерация музыки', layout, icon=icon_name) #Окно программы
 
 def updateWindowElementsDisabled(state): #изменить состояние элементов интерфейса: недоступны (True) или доступны (False)
     window['InputFile'].update(disabled=state)
@@ -233,6 +254,7 @@ def updateWindowElementsDisabled(state): #изменить состояние э
     window['ClearFiles'].update(disabled=state)
     window['MidiListView'].update(disabled=state)
     window['SaveAsButton'].update(disabled=state)
+    window['SettingsButton'].update(disabled=state)
     window['Duration'].update(disabled=state)
     window['Generate'].update(disabled=state)
 
@@ -281,7 +303,8 @@ while True:                             #The Event Loop
         window['pleaseWait'].update(visible=True)
         #запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
         window.start_thread(lambda: midiGenerate(midiFilesType0Paths, values['NewFilePath'],
-                                                      duration, window), ('threadMidiGenerate', 'threadMidiGenerateEnded'))
+            duration, currentMinNearChordIndex, currentMaxNearChordIndex, currentEndRuleProbability, window),
+            ('threadMidiGenerate', 'threadMidiGenerateEnded'))
     if event[0] == 'threadMidiGenerate':
         if event[1] == 'Complete':
             for midi0 in midiFilesType0Paths:  # Удалить промежуточные файлы
@@ -310,3 +333,85 @@ while True:                             #The Event Loop
         sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
+    if event == 'SettingsButton': #открыть окно доп. настроек
+        layoutSettingsWindow = [[sg.Text('Мин. индекс случайного соседнего аккорда: '), sg.Push(),
+                                 sg.InputText(key='MinIndex', default_text=currentMinNearChordIndex, enable_events=True,
+                                              size=(14, 1))],
+                                [sg.Text('Макс. индекс случайного соседнего аккорда: '), sg.Push(),
+                                 sg.InputText(key='MaxIndex', default_text=currentMaxNearChordIndex, enable_events=True,
+                                              size=(14, 1))],
+                                [sg.Text('Вероятность конечной продукции вместо промежуточной: '), sg.Push(),
+                                 sg.InputText(key='Probability', default_text=currentEndRuleProbability, enable_events=True,
+                                              size=(14, 1))],
+                                [sg.Push(), sg.Button('Восст. по умолчанию',key='restoreByDefault')],
+                                [sg.Push(), sg.OK(key='OkSettings', size=(7,1)), sg.Push()]]
+        settingsWindow = sg.Window('Доп. настройки генерации', layoutSettingsWindow, icon=icon_name,
+                                   disable_minimize=True, modal=True)
+        while True:
+            event, values = settingsWindow.read()
+            if event == sg.WIN_CLOSED or event == 'Exit':
+                break
+            if event == 'OkSettings': #сохранить настройки генерации
+                if(int(values['MinIndex'])> int(values['MaxIndex'])):
+                    sg.popup('Мин. значение индекса не может быть больше максимального',
+                             keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
+                             any_key_closes=True, grab_anywhere=True, button_justification='centered')
+                    continue
+                if(float(values['Probability'])>1):
+                    sg.popup('Вероятность не может быть больше 1',
+                             keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
+                             any_key_closes=True, grab_anywhere=True, button_justification='centered')
+                    continue
+                currentMinNearChordIndex = int(values['MinIndex'])
+                currentMaxNearChordIndex = int(values['MaxIndex'])
+                currentEndRuleProbability = float(values['Probability'])
+                break
+            if event == 'restoreByDefault': #восстановить значения по умолчанию
+                currentMinNearChordIndex = defaultMinNearChordIndex
+                currentMaxNearChordIndex = defaultMaxNearChordIndex
+                currentEndRuleProbability = defaultEndRuleProbability
+                settingsWindow['MinIndex'].update(currentMinNearChordIndex)
+                settingsWindow['MaxIndex'].update(currentMaxNearChordIndex)
+                settingsWindow['Probability'].update(currentEndRuleProbability)
+            if event == 'MinIndex':
+                str = values['MinIndex']
+                i = 0
+                for character in str:  # Защита ввода продолжительности, только цифры
+                    if i == 0 and character == '-':
+                        i = i + 1
+                        continue
+                    if character not in ('0123456789'):
+                        str = str[:i] + str[i+1:]
+                        settingsWindow['MinIndex'].update(str)
+                        i = -1
+                    i = i + 1
+            if event == 'MaxIndex':
+                str = values['MaxIndex']
+                i = 0
+                for character in str:  # Защита ввода продолжительности, только цифры
+                    if i == 0 and character == '-':
+                        i = i + 1
+                        continue
+                    if character not in ('0123456789'):
+                        str = str[:i] + str[i+1:]
+                        settingsWindow['MaxIndex'].update(str)
+                        i = -1
+                    i = i + 1
+            if event == 'Probability':
+                dotCount = 0
+                str = values['Probability']
+                for character in str:  # Защита ввода продолжительности, только цифры и одна "."
+                    if character not in ('0123456789.'):
+                        str = str.replace(character, '')
+                        settingsWindow['Probability'].update(str)
+                    if character == '.':
+                        dotCount = dotCount + 1
+                        if dotCount > 1:
+                            str = ''.join(str.rsplit('.', 1))
+                            settingsWindow['Probability'].update(str)
+                            dotCount = dotCount - 1
+                    if character == '.' and str.index(character) == 0:
+                        str = ''.join(str.rsplit('.', 1))
+                        settingsWindow['Probability'].update(str)
+                        dotCount = dotCount - 1
+        settingsWindow.close()

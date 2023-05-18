@@ -3,11 +3,6 @@ from ChordComparison import chordsAreEqual
 from ChordSequenceComparison import chordSequencesAreEqual
 from UniqueChordSequenceAdding import appendUniqueChordSequence
 
-MinNearChordIndex = -10 #мин. индекс соседнего аккорда, если нужно взять случайный ближайший
-MaxNearChordIndex = 10 #макс. индекс соседнего аккорда, если нужно взять случайный ближайший
-EndRuleProbability = 0.6    #вероятность вернуть продукцию конечного правила
-                            # вместо случайной продукции случайного узла ветви дерева,
-                            # которая идет от корня до конечного правила
 class GrammarNode:
     'Узел дерева грамматики'
     def __init__(self):
@@ -15,7 +10,7 @@ class GrammarNode:
         self.nextNodes = {}  #словарь, ключ - возможная продукция (аккорд), значение - следующий узел, может быть пуст (None)
 
     # сгенерировать следующий аккорд для заданной последовательности (на основе правил данного дерева грамматики)
-    def generateNextChord(self, baseSequence, listOfChordLists):
+    def generateNextChord(self, baseSequence, listOfChordLists, minNearChordIndex, maxNearChordIndex, endRuleProbability):
         #если есть только один подузел, и у него нет потомков, вернуть единственный возможный сл. аккорд (продукцию)
         if len(self.nextNodes.values()) == 1 and list(self.nextNodes.values())[0] == None:
             return list(self.nextNodes.keys())[0]
@@ -41,7 +36,7 @@ class GrammarNode:
                     if flagBreak == True:
                         break
                 return chordListWithBaseLastChord[max(0, min(indexOfChordInList +
-                       random.randint(MinNearChordIndex, MaxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
+                       random.randint(minNearChordIndex, maxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
         #расширить контекст
         extendedSequence = baseSequence[len(baseSequence)-2:] #два последних аккорда в последовательности
         #найти в подузлах правила для расширенного контекста
@@ -69,13 +64,13 @@ class GrammarNode:
                     if flagBreak == True:
                         break
                 return chordListWithBaseLastChord[max(0, min(indexOfChordInList +
-                       random.randint(MinNearChordIndex, MaxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
+                       random.randint(minNearChordIndex, maxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
         #правила для расширенного контекста были найдены
         rule = nodesWithExtendedSequence[0] #правило для контекста
         rule.generateNextChordDeeper(baseSequence, pathFromRootToEnd, 3) #найти более точное правило, увеличивая контекст
-        if random.random() <= 0.6: #с вероятностью 60% вернуть продукцию конечного правила
+        if random.random() <= endRuleProbability: #с вероятностью endRuleProbability вернуть продукцию конечного правила
             return list(pathFromRootToEnd[-1].nextNodes.keys())[0]
-        # с вероятностью 40% вернуть случайную продукцию случайного узла ветви дерева,
+        # с вероятностью (1 - endRuleProbability) вернуть случайную продукцию случайного узла ветви дерева,
         # которая идет от корня до конечного правила
         return random.choice(list((random.choice(pathFromRootToEnd)).nextNodes.keys()))
 
