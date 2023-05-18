@@ -3,6 +3,7 @@ import mido                     #версия 1.2.10
 import os
 import statistics
 import copy
+from itertools import groupby
 
 from ExtendendMessage import ExtendendMessage
 from Chord import Chord
@@ -65,9 +66,10 @@ def buildGrammar(midis): #Построение контекстно-зависи
             i = i + 1
         # убрать сообщения выключения ноты, так как инфо о длительности звучания хранится у сообщ-ий включения ноты
         messages = [m for m in messages if m.msg.type!='note_off']
+        # сгруппировать сообщения по абсолютному времени в словарь (ключ - абсолютное время)
         msgGroups = {}
-        for m in messages: #сгруппировать сообщения по абсолютному времени в словарь (ключ - абсолютное время)
-            msgGroups.setdefault(m.absolute, []).append(m)
+        for abs, msgs in groupby(messages, lambda m: m.absolute):
+            msgGroups[abs] = list(msgs)
         del messages
         chords = [] #список аккордов для данного MIDI-файла
         flagFirstChordIsInList = False #флаг о том, что первый аккорд добавлен в список
