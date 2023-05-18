@@ -178,8 +178,16 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
                    minNearChordIndex, maxNearChordIndex, endRuleProbability):
     generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
     # пока длительность меньше заданной, добавлять продуцированные сообщения
+    indexMidiFile = 0
     while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) <= durationSeconds:
         lastChord = generatedChordSequence[-1]
+        # если достигнут последний аккорд файла, перейти к первому аккорду следующего файла
+        if lastChord == listOfChordLists[indexMidiFile][-1]:
+            indexMidiFile = indexMidiFile + 1
+            # если достигнут последний аккорд последнего файла, перейти к первому аккорду первого файла
+            if indexMidiFile >= len(listOfChordLists):
+                indexMidiFile = 0
+            lastChord = listOfChordLists[indexMidiFile][0]
         #найти дерево грамматики для последнего аккорда в последовательности
         grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
         rule = grammarRules[0]
@@ -329,7 +337,7 @@ while True:                             #The Event Loop
         sg.popup('Не указан путь сохранения файла, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
-    if event == 'Generate' and (not values['Duration'] or values['Duration'][0]==':'):
+    if event == 'Generate' and (not values['Duration'] or values['Duration'][0]==':' or values['Duration'][len(values['Duration'])-1]==':'):
         sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
