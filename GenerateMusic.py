@@ -49,19 +49,20 @@ def buildGrammar(midis): #Построение контекстно-зависи
     listOfChordLists = [] #список аккордов всех входных MIDI-файлов (для каждого файла свой список)
     for midi in midis:
         messages = [ExtendendMessage(m) for m in midi.tracks[0] if (m.is_meta == False)
-                    or (m.is_meta == True and m.type=='set_tempo')] #все сообщения трека (кроме мета- и изменения темпа)
+                    or (m.is_meta == True and m.type=='set_tempo')] #все сообщения трека (кроме мета-, но с изменением темпа)
         absoluteTime=0
+        i = 0
         for m in messages:
             absoluteTime = absoluteTime + m.msg.time
             m.absolute = absoluteTime #получить абсолютное время для сообщения
             if m.msg.type == 'note_off': #найти сообщение начала звучания ноты и записать для неё длительность
-                messagesBeforeThisMsg = list(reversed(messages[:(messages.index(m))]))
+                messagesBeforeThisMsg = list(reversed(messages[:i]))
                 for msgBefore in messagesBeforeThisMsg:
                     if msgBefore.msg.type == 'note_on' and msgBefore.msg.channel == m.msg.channel \
-                            and msgBefore.msg.note == m.msg.note:
-                        messages[messages.index(m)-(messagesBeforeThisMsg.index(msgBefore))-1].duration = \
-                            m.absolute - msgBefore.absolute    #записать длительность звучания ноты
+                            and msgBefore.msg.note == m.msg.note and msgBefore.duration==0:
+                        msgBefore.duration = m.absolute - msgBefore.absolute    #записать длительность звучания ноты
                         break
+            i = i + 1
         # убрать сообщения выключения ноты, так как инфо о длительности звучания хранится у сообщ-ий включения ноты
         messages = [m for m in messages if m.msg.type!='note_off']
         msgGroups = {}
