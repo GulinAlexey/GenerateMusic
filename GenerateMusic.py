@@ -188,6 +188,7 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
             if indexMidiFile >= len(listOfChordLists):
                 indexMidiFile = 0
             lastChord = listOfChordLists[indexMidiFile][0]
+            generatedChordSequence.append(lastChord)
         #найти дерево грамматики для последнего аккорда в последовательности
         grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
         rule = grammarRules[0]
