@@ -361,19 +361,28 @@ while True:                             #The Event Loop
             if event == sg.WIN_CLOSED or event == 'Exit':
                 break
             if event == 'OkSettings': #сохранить настройки генерации
-                if(int(values['MinIndex'])> int(values['MaxIndex'])):
+                if values['MinIndex']!= '' and values['MaxIndex']!= '' and int(values['MinIndex'])> int(values['MaxIndex']):
                     sg.popup('Мин. значение индекса не может быть больше максимального',
                              keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                              any_key_closes=True, grab_anywhere=True, button_justification='centered')
                     continue
-                if(float(values['Probability'])>1):
+                if values['Probability'] != '' and float(values['Probability'])>1:
                     sg.popup('Вероятность не может быть больше 1',
                              keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                              any_key_closes=True, grab_anywhere=True, button_justification='centered')
                     continue
-                currentMinNearChordIndex = int(values['MinIndex'])
-                currentMaxNearChordIndex = int(values['MaxIndex'])
-                currentEndRuleProbability = float(values['Probability'])
+                if values['MinIndex'] == '':
+                    currentMinNearChordIndex = defaultMinNearChordIndex
+                else:
+                    currentMinNearChordIndex = int(values['MinIndex'])
+                if values['MaxIndex'] == '':
+                    currentMaxNearChordIndex = defaultMaxNearChordIndex
+                else:
+                    currentMaxNearChordIndex = int(values['MaxIndex'])
+                if values['Probability'] == '':
+                    currentEndRuleProbability = defaultEndRuleProbability
+                else:
+                    currentEndRuleProbability = float(values['Probability'])
                 break
             if event == 'restoreByDefault': #восстановить значения по умолчанию
                 currentMinNearChordIndex = defaultMinNearChordIndex
