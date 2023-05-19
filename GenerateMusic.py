@@ -176,10 +176,12 @@ def buildGrammarNode(root, chords): #Построить правила для К
 #создать новую последовательность аккордов из MIDI-сообщений
 def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists,
                    minNearChordIndex, maxNearChordIndex, endRuleProbability):
+    resultedGeneratedChordSequence = []
     generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
     # пока длительность меньше заданной, добавлять продуцированные сообщения
     indexMidiFile = 0
-    while getChordSequenceDurationInSeconds(generatedChordSequence, ticksPerBeat) <= durationSeconds:
+    while getChordSequenceDurationInSeconds(resultedGeneratedChordSequence + generatedChordSequence,
+                                            ticksPerBeat) <= durationSeconds:
         lastChord = generatedChordSequence[-1]
         # если достигнут последний аккорд файла, перейти к первому аккорду следующего файла
         if lastChord == listOfChordLists[indexMidiFile][-1]:
@@ -188,14 +190,16 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
             if indexMidiFile >= len(listOfChordLists):
                 indexMidiFile = 0
             lastChord = listOfChordLists[indexMidiFile][0]
-            generatedChordSequence.append(lastChord)
+            resultedGeneratedChordSequence.extend(generatedChordSequence)
+            generatedChordSequence = [lastChord]
         #найти дерево грамматики для последнего аккорда в последовательности
         grammarRules = [node for node in grammar if chordsAreEqual(node.value[0], lastChord)]
         rule = grammarRules[0]
         # добавить к текущей последовательности сгенерированный аккорд
         generatedChordSequence.append(rule.generateNextChord(generatedChordSequence, listOfChordLists,
                                                              minNearChordIndex, maxNearChordIndex, endRuleProbability))
-    return generatedChordSequence
+    resultedGeneratedChordSequence.extend(generatedChordSequence)
+    return resultedGeneratedChordSequence
 
 # перенести сообщения из последовательности аккордов в трек
 def moveMsgsFromChordsToTrack(chordSequence, midiTrack):
