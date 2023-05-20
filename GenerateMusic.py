@@ -28,6 +28,14 @@ defaultMaxNearChordIndex = 10 #макс. индекс соседнего акк�
 defaultEndRuleProbability = 0.6     #вероятность вернуть продукцию конечного правила
                                     # вместо случайной продукции случайного узла ветви дерева,
                                     # которая идет от корня до конечного правила
+defaultLimitNotesCheckbox = False       # ограничить количество нот во входном файле
+                                        # (помогает при зависании программы на объёмных файлах)
+defaultLimitNotes = 500 # ограничение количества нот во входном файле, если отмечен checkbox
+defaultEnableGenerateLooping = True     # флаг включение зацикливания генерации нового файла
+                                        # (если достигнут конец входного файла, продолжить
+                                        # достраивать последовательность с первого аккорда входного файла)
+defaultIgnoreNoteOff = False    #игнорировать события выкл. ноты, может улучшить генерацию
+                                # мелодий с инструментами, не зависящими от note_off (например, пианино)
 
 def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
     midiType1 = mido.MidiFile(midiType1FilePath) #считать файл в переменную
@@ -40,16 +48,18 @@ def convertType1ToType0(midiType1FilePath): #Конвертация MIDI из ф
 
 #Генерация нового MIDI-файла (в отдельном потоке)
 def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, minNearChordIndex, maxNearChordIndex,
-                 endRuleProbability, window):
+                 endRuleProbability, limitNotesCheckbox, limitNotes, enableGenerateLooping, ignoreNoteOff, window):
     inputMidis = []
     for path in midiType0FilesPaths:
         inputMidis.append(mido.MidiFile(path)) #прочитать все входные MIDI-файлы в список
-    grammar, newTicksPerBeat, listOfChordLists = buildGrammar(inputMidis) #построить КЗ-грамматику
+    # построить КЗ-грамматику
+    grammar, newTicksPerBeat, listOfChordLists = buildGrammar(inputMidis,
+                                                              limitNotesCheckbox, limitNotes, ignoreNoteOff)
     # начальная последовательность состоит из первых аккордов входных файлов
     #создать новую последовательность аккордов
     generatedChordSequence = produceNewMidi([chordList[0] for chordList in listOfChordLists],
                                             grammar, newDurationSeconds, newTicksPerBeat, listOfChordLists,
-                                            minNearChordIndex, maxNearChordIndex, endRuleProbability)
+                                            minNearChordIndex, maxNearChordIndex, endRuleProbability, enableGenerateLooping)
     outputMidi = mido.MidiFile(type = 0, ticks_per_beat=newTicksPerBeat)
     outputTrack = mido.MidiTrack()
     outputMidi.tracks.append(outputTrack)
@@ -61,19 +71,23 @@ def midiGenerate(midiType0FilesPaths, newFileNamePath, newDurationSeconds, minNe
     outputMidi.save(newFileNamePath) #сохранить файл
     window.write_event_value(('threadMidiGenerate', 'Complete'), 'Success') #сообщение в очередь GUI о конце работы потока
 
-def buildGrammar(midis): #Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
+#Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
+def buildGrammar(midis, limitNotesCheckbox, limitNotes, ignoreNoteOff):
     roots = [] #грамматика - возвращаемое значение
     newTicksPerBeat = statistics.mean([midi.ticks_per_beat for midi in midis]) #такт = среднеарифм. среди MIDI
     listOfChordLists = [] #список аккордов всех входных MIDI-файлов (для каждого файла свой список)
     for midi in midis:
         messages = [ExtendendMessage(m) for m in midi.tracks[0] if (m.is_meta == False)
                     or (m.is_meta == True and m.type=='set_tempo')] #все сообщения трека (кроме мета-, но с изменением темпа)
+        if limitNotesCheckbox:
+            messages = messages[:limitNotes+1]
         absoluteTime=0
         i = 0
         for m in messages:
             absoluteTime = absoluteTime + m.msg.time
             m.absolute = absoluteTime #получить абсолютное время для сообщения
-            if m.msg.type == 'note_off': #найти сообщение начала звучания ноты и записать для неё длительность
+            # найти сообщение начала звучания ноты и записать для неё длительность
+            if m.msg.type == 'note_off' and not ignoreNoteOff:
                 messagesBeforeThisMsg = list(reversed(messages[:i]))
                 for msgBefore in messagesBeforeThisMsg:
                     if msgBefore.msg.type == 'note_on' and msgBefore.msg.channel == m.msg.channel \
@@ -175,7 +189,7 @@ def buildGrammarNode(root, chords): #Построить правила для К
 
 #создать новую последовательность аккордов из MIDI-сообщений
 def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists,
-                   minNearChordIndex, maxNearChordIndex, endRuleProbability):
+                   minNearChordIndex, maxNearChordIndex, endRuleProbability, enableGenerateLooping):
     resultedGeneratedChordSequence = []
     generatedChordSequence = initialChordSequence #текущая последовательность равна начальной
     # пока длительность меньше заданной, добавлять продуцированные сообщения
@@ -184,7 +198,7 @@ def produceNewMidi(initialChordSequence, grammar, durationSeconds, ticksPerBeat,
                                             ticksPerBeat) <= durationSeconds:
         lastChord = generatedChordSequence[-1]
         # если достигнут последний аккорд файла, перейти к первому аккорду следующего файла
-        if lastChord == listOfChordLists[indexMidiFile][-1]:
+        if lastChord == listOfChordLists[indexMidiFile][-1] and enableGenerateLooping:
             indexMidiFile = indexMidiFile + 1
             # если достигнут последний аккорд последнего файла, перейти к первому аккорду первого файла
             if indexMidiFile >= len(listOfChordLists):
@@ -240,6 +254,14 @@ currentMaxNearChordIndex = defaultMaxNearChordIndex #макс. индекс со
 currentEndRuleProbability = defaultEndRuleProbability       #вероятность вернуть продукцию конечного правила
                                                             # вместо случайной продукции случайного узла ветви дерева,
                                                             # которая идет от корня до конечного правила
+currentLimitNotesCheckbox = defaultLimitNotesCheckbox       # ограничить количество нот во входном файле
+                                                            # (помогает при зависании программы на объёмных файлах)
+currentLimitNotes = defaultLimitNotes # ограничение количества нот во входном файле, если отмечен checkbox
+currentEnableGenerateLooping = True     # флаг включение зацикливания генерации нового файла
+                                        # (если достигнут конец входного файла, продолжить
+                                        # достраивать последовательность с первого аккорда входного файла)
+currentIgnoreNoteOff = defaultIgnoreNoteOff     #игнорировать события выкл. ноты, может улучшить генерацию
+                                                # мелодий с инструментами, не зависящими от note_off (например, пианино)
 
 #интерфейс
 layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
@@ -316,7 +338,8 @@ while True:                             #The Event Loop
         window['pleaseWait'].update(visible=True)
         #запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
         window.start_thread(lambda: midiGenerate(midiFilesType0Paths, values['NewFilePath'],
-            duration, currentMinNearChordIndex, currentMaxNearChordIndex, currentEndRuleProbability, window),
+            duration, currentMinNearChordIndex, currentMaxNearChordIndex, currentEndRuleProbability,
+            currentLimitNotesCheckbox, currentLimitNotes, currentEnableGenerateLooping, currentIgnoreNoteOff, window),
             ('threadMidiGenerate', 'threadMidiGenerateEnded'))
     if event[0] == 'threadMidiGenerate':
         if event[1] == 'Complete':
@@ -342,7 +365,8 @@ while True:                             #The Event Loop
         sg.popup('Не указан путь сохранения файла, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
-    if event == 'Generate' and (not values['Duration'] or values['Duration'][0]==':' or values['Duration'][len(values['Duration'])-1]==':'):
+    if event == 'Generate' and (not values['Duration'] or values['Duration'][0]==':' or
+                                values['Duration'][len(values['Duration'])-1]==':'):
         sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
                 keep_on_top=True, no_titlebar=True, background_color=popupBackgroundColor,
                 any_key_closes=True, grab_anywhere=True, button_justification='centered')
@@ -356,6 +380,17 @@ while True:                             #The Event Loop
                                 [sg.Text('Вероятность конечной продукции вместо промежуточной: '), sg.Push(),
                                  sg.InputText(key='Probability', default_text=currentEndRuleProbability, enable_events=True,
                                               size=(14, 1))],
+                                [sg.Frame('', size =(500, 63), layout=
+                                    [[sg.Checkbox('Ограничить кол-во нот во входном файле', enable_events=True,
+                                            key='LimitNotesCheckbox', default=currentLimitNotesCheckbox)],
+                                    [sg.Text('Кол-во нот во входном файле: '), sg.Push(),
+                                            sg.InputText(key='LimitNotes', disabled_readonly_background_color='#b7b7b7',
+                                            default_text=currentLimitNotes, disabled= not currentLimitNotesCheckbox,
+                                            enable_events=True, size=(13, 1))]])],
+                                [sg.Checkbox('Зациклить процесс генерации при достижении конца входных файлов',
+                                             key='GenerateLooping', default=currentEnableGenerateLooping)],
+                                [sg.Checkbox('Не учитывать события note_off (выкл. ноты)',
+                                             key='IgnoreNoteOff', default=currentIgnoreNoteOff)],
                                 [sg.Push(), sg.Button('Восст. по умолчанию',key='restoreByDefault')],
                                 [sg.Push(), sg.OK(key='OkSettings', size=(7,1)), sg.Push()]]
         settingsWindow = sg.Window('Доп. настройки генерации', layoutSettingsWindow, icon=icon_name,
@@ -387,6 +422,13 @@ while True:                             #The Event Loop
                     currentEndRuleProbability = defaultEndRuleProbability
                 else:
                     currentEndRuleProbability = float(values['Probability'])
+                currentLimitNotesCheckbox = values['LimitNotesCheckbox']
+                if values['LimitNotes'] == '':
+                    currentLimitNotes = defaultLimitNotes
+                else:
+                    currentLimitNotes = int(values['LimitNotes'])
+                currentEnableGenerateLooping = values['GenerateLooping']
+                currentIgnoreNoteOff = values['IgnoreNoteOff']
                 break
             if event == 'restoreByDefault': #восстановить значения по умолчанию
                 currentMinNearChordIndex = defaultMinNearChordIndex
@@ -395,10 +437,15 @@ while True:                             #The Event Loop
                 settingsWindow['MinIndex'].update(currentMinNearChordIndex)
                 settingsWindow['MaxIndex'].update(currentMaxNearChordIndex)
                 settingsWindow['Probability'].update(currentEndRuleProbability)
+                settingsWindow['LimitNotesCheckbox'].update(defaultLimitNotesCheckbox)
+                settingsWindow['LimitNotes'].update(defaultLimitNotes)
+                settingsWindow['GenerateLooping'].update(defaultEnableGenerateLooping)
+                settingsWindow['IgnoreNoteOff'].update(defaultIgnoreNoteOff)
+                settingsWindow['LimitNotes'].update(disabled=True)
             if event == 'MinIndex':
                 str = values['MinIndex']
                 i = 0
-                for character in str:  # Защита ввода продолжительности, только цифры
+                for character in str:  # Защита ввода продолжительности, только цифры и "-"
                     if i == 0 and character == '-':
                         i = i + 1
                         continue
@@ -410,7 +457,7 @@ while True:                             #The Event Loop
             if event == 'MaxIndex':
                 str = values['MaxIndex']
                 i = 0
-                for character in str:  # Защита ввода продолжительности, только цифры
+                for character in str:  # Защита ввода продолжительности, только цифры и "-"
                     if i == 0 and character == '-':
                         i = i + 1
                         continue
@@ -436,4 +483,15 @@ while True:                             #The Event Loop
                         str = ''.join(str.rsplit('.', 1))
                         settingsWindow['Probability'].update(str)
                         dotCount = dotCount - 1
+            if event == 'LimitNotesCheckbox':
+                settingsWindow['LimitNotes'].update(disabled= not values['LimitNotesCheckbox'])
+            if event == 'LimitNotes':
+                str = values['LimitNotes']
+                i = 0
+                for character in str:  # Защита ввода продолжительности, только цифры
+                    if character not in ('0123456789') or (i == 0 and character == '0'):
+                        str = str[:i] + str[i + 1:]
+                        settingsWindow['LimitNotes'].update(str)
+                        i = -1
+                    i = i + 1
         settingsWindow.close()
