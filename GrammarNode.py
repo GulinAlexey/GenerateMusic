@@ -1,7 +1,7 @@
 import random
-from ChordComparison import chordsAreEqual
-from ChordSequenceComparison import chordSequencesAreEqual
-from UniqueChordSequenceAdding import appendUniqueChordSequence
+from ChordComparison import ChordComparison
+from ChordSequenceComparison import ChordSequenceComparison
+from UniqueChordSequenceAdding import UniqueChordSequenceAdding
 
 class GrammarNode:
     'Узел дерева грамматики'
@@ -11,6 +11,11 @@ class GrammarNode:
 
     # сгенерировать следующий аккорд для заданной последовательности (на основе правил данного дерева грамматики)
     def generateNextChord(self, baseSequence, listOfChordLists, minNearChordIndex, maxNearChordIndex, endRuleProbability):
+        ### импорт статических методов в качестве функций
+        chordsAreEqual = ChordComparison.chordsAreEqual
+        chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual
+        appendUniqueChordSequence = UniqueChordSequenceAdding.appendUniqueChordSequence
+        ###
         #если есть только один подузел, и у него нет потомков, вернуть единственный возможный сл. аккорд (продукцию)
         if len(self.nextNodes.values()) == 1 and list(self.nextNodes.values())[0] == None:
             return list(self.nextNodes.keys())[0]
@@ -76,6 +81,10 @@ class GrammarNode:
 
     #продолжить искать конечное правило для переданной последовательности
     def generateNextChordDeeper(self, baseSequence, pathFromRootToEnd, contextLevel):
+        ### импорт статических методов в качестве функций
+        chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual
+        appendUniqueChordSequence = UniqueChordSequenceAdding.appendUniqueChordSequence
+        ###
         pathFromRootToEnd.append(self) # добавить данный узел в рассматриваемую ветвь дерева грамматики
         #порядок действий схож с методом generateNextChord()
         if len(self.nextNodes) == 1 and list(self.nextNodes.values())[0] == None:
