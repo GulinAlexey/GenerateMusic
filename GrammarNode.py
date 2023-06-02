@@ -72,7 +72,7 @@ class GrammarNode:
                        random.randint(minNearChordIndex, maxNearChordIndex), len(chordListWithBaseLastChord) - 1))]
         #правила для расширенного контекста были найдены
         rule = nodesWithExtendedSequence[0] #правило для контекста
-        rule.generateNextChordDeeper(baseSequence, pathFromRootToEnd, 3) #найти более точное правило, увеличивая контекст
+        rule.__generateNextChordDeeper(baseSequence, pathFromRootToEnd, 3) #найти более точное правило, увеличивая контекст
         if random.random() <= endRuleProbability: #с вероятностью endRuleProbability вернуть продукцию конечного правила
             return list(pathFromRootToEnd[-1].nextNodes.keys())[0]
         # с вероятностью (1 - endRuleProbability) вернуть случайную продукцию случайного узла ветви дерева,
@@ -80,7 +80,7 @@ class GrammarNode:
         return random.choice(list((random.choice(pathFromRootToEnd)).nextNodes.keys()))
 
     #продолжить искать конечное правило для переданной последовательности
-    def generateNextChordDeeper(self, baseSequence, pathFromRootToEnd, contextLevel):
+    def __generateNextChordDeeper(self, baseSequence, pathFromRootToEnd, contextLevel):
         ### импорт статических методов в качестве функций
         chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual
         appendUniqueChordSequence = UniqueChordSequenceAdding.appendUniqueChordSequence
@@ -106,4 +106,4 @@ class GrammarNode:
         # правила для расширенного контекста были найдены
         rule = nodesWithExtendedSequence[0] #правило для контекста
         # найти более точное правило, увеличивая контекст
-        rule.generateNextChordDeeper(baseSequence, pathFromRootToEnd, contextLevel + 1)
+        rule.__generateNextChordDeeper(baseSequence, pathFromRootToEnd, contextLevel + 1)

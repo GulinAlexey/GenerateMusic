@@ -17,58 +17,58 @@ from GettingOfChordSequenceDurationInSeconds import GettingOfChordSequenceDurati
 
 class GenerateMusic:
     def __init__(self):
-        self.midiFormat = '.mid'
+        self.__midiFormat = '.mid'
         # конец имени промежуточного файла - конвертированного исходного в формат 0
-        self.format0FilenameEnd = '_format_0' + self.midiFormat
-        self.popupBackgroundColor = '#1a263c'
-        self.icon_name = 'app_icon.ico'
-        self.pleaseWaitText = 'Запущен процесс генерации. Ожидайте завершения процесса...\n' \
+        self.__format0FilenameEnd = '_format_0' + self.__midiFormat
+        self.__popupBackgroundColor = '#1a263c'
+        self.__icon_name = 'app_icon.ico'
+        self.__pleaseWaitText = 'Запущен процесс генерации. Ожидайте завершения процесса...\n' \
                          '                            Время начала = '
         # значения по умолчанию:
-        self.defaultMinNearChordIndex = -10  # мин. индекс соседнего аккорда, если нужно взять случайный ближайший
-        self.defaultMaxNearChordIndex = 10  # макс. индекс соседнего аккорда, если нужно взять случайный ближайший
-        self.defaultEndRuleProbability = 0.6     # вероятность вернуть продукцию конечного правила
+        self.__defaultMinNearChordIndex = -10  # мин. индекс соседнего аккорда, если нужно взять случайный ближайший
+        self.__defaultMaxNearChordIndex = 10  # макс. индекс соседнего аккорда, если нужно взять случайный ближайший
+        self.__defaultEndRuleProbability = 0.6     # вероятность вернуть продукцию конечного правила
                                             # вместо случайной продукции случайного узла ветви дерева,
                                             # которая идет от корня до конечного правила
-        self.defaultLimitNotesCheckbox = False       # ограничить количество нот во входном файле
+        self.__defaultLimitNotesCheckbox = False       # ограничить количество нот во входном файле
                                                 # (помогает при зависании программы на объёмных файлах)
-        self.defaultLimitNotes = 500  # ограничение количества нот во входном файле, если отмечен checkbox
-        self.defaultEnableGenerateLooping = True # флаг включение зацикливания генерации нового файла
+        self.__defaultLimitNotes = 500  # ограничение количества нот во входном файле, если отмечен checkbox
+        self.__defaultEnableGenerateLooping = True # флаг включение зацикливания генерации нового файла
                                             # (если достигнут конец входного файла, продолжить
                                             # достраивать последовательность с первого аккорда входного файла)
-        self.defaultIgnoreNoteOff = False    # игнорировать события выкл. ноты, может улучшить генерацию
+        self.__defaultIgnoreNoteOff = False    # игнорировать события выкл. ноты, может улучшить генерацию
                                         # мелодий с инструментами, не зависящими от note_off (например, пианино)
         # текущие значения:
         # мин. индекс соседнего аккорда, если нужно взять случайный ближайший
-        self.currentMinNearChordIndex = self.defaultMinNearChordIndex
+        self.__currentMinNearChordIndex = self.__defaultMinNearChordIndex
         # макс. индекс соседнего аккорда, если нужно взять случайный ближайший
-        self.currentMaxNearChordIndex = self.defaultMaxNearChordIndex
-        self.currentEndRuleProbability = self.defaultEndRuleProbability # вероятность вернуть продукцию конечного правила
+        self.__currentMaxNearChordIndex = self.__defaultMaxNearChordIndex
+        self.__currentEndRuleProbability = self.__defaultEndRuleProbability # вероятность вернуть продукцию конечного правила
                                                                         # вместо случайной продукции случайного узла
                                                                         # ветви дерева, которая идет от корня до конечного
                                                                         # правила
-        self.currentLimitNotesCheckbox = self.defaultLimitNotesCheckbox     # ограничить количество нот во входном файле
+        self.__currentLimitNotesCheckbox = self.__defaultLimitNotesCheckbox     # ограничить количество нот во входном файле
                                                                             # (помогает при зависании программы
                                                                             # на объёмных файлах)
-        self.currentLimitNotes = self.defaultLimitNotes     # ограничение количества нот во входном файле,
+        self.__currentLimitNotes = self.__defaultLimitNotes     # ограничение количества нот во входном файле,
                                                             # если отмечен checkbox
-        self.currentEnableGenerateLooping = True    # флаг включение зацикливания генерации нового файла
+        self.__currentEnableGenerateLooping = True    # флаг включение зацикливания генерации нового файла
                                                     # (если достигнут конец входного файла, продолжить
                                                     # достраивать последовательность с первого аккорда входного файла)
-        self.currentIgnoreNoteOff = self.defaultIgnoreNoteOff   # игнорировать события выкл. ноты, может улучшить генерацию
+        self.__currentIgnoreNoteOff = self.__defaultIgnoreNoteOff   # игнорировать события выкл. ноты, может улучшить генерацию
                                                                 # мелодий с инструментами, не зависящими от note_off
                                                                 #  (например, пианино)
         ###
-        self.midiList = []  # Список исходных MIDI-файлов для генерации
-        self.midiFilesType0Paths = []  # Список MIDI-файлов формата 0
-        self.startTime = None
+        self.__midiList = []  # Список исходных MIDI-файлов для генерации
+        self.__midiFilesType0Paths = []  # Список MIDI-файлов формата 0
+        self.__startTime = None
         ###
         # интерфейс
-        self.layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
+        self.__layout = [[sg.Text('Исходные MIDI-файлы:'), sg.Push(),
                    sg.Column([[sg.FileBrowse('Добавить', key='InputFile',
                                              enable_events=True, file_types=(('MIDI files', '*.mid'),))]]),
                    sg.Button('Удалить', key='DeleteFile'), sg.Button('Очистить', key='ClearFiles')],
-                  [sg.Listbox(self.midiList, size=(73, 10), enable_events=True, key='MidiListView')],
+                  [sg.Listbox(self.__midiList, size=(73, 10), enable_events=True, key='MidiListView')],
                   [sg.Text('Имя генерируемого файла: '), sg.InputText(key='NewFilePath', disabled=True,
                                                                       disabled_readonly_background_color='#b7b7b7',
                                                                       size=(34, 1)),
@@ -78,33 +78,33 @@ class GenerateMusic:
                                 size=(34, 1), enable_events=True)],
                   [sg.Checkbox('Открыть результат после генерации', key='OpenAfterGeneration', default=True)],
                   [sg.Button('Доп. настройки', key='SettingsButton')],
-                  [sg.Push(), sg.Text(self.pleaseWaitText, font='Helvetica 13', visible=False, key='pleaseWait'), sg.Push()],
+                  [sg.Push(), sg.Text(self.__pleaseWaitText, font='Helvetica 13', visible=False, key='pleaseWait'), sg.Push()],
                   [sg.Push(), sg.Submit('Генерировать', key='Generate'),
                    sg.Cancel('Отменить и выйти', key='Cancel'), sg.Push()]
                   ]
-        self.window = sg.Window('Генерация музыки', self.layout, icon=self.icon_name)  # Окно программы
+        self.__window = sg.Window('Генерация музыки', self.__layout, icon=self.__icon_name)  # Окно программы
 
-    def convertType1ToType0(self, midiType1FilePath):  # Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
+    def __convertType1ToType0(self, midiType1FilePath):  # Конвертация MIDI из формата 1 в формат 0 (объединить все треки)
         midiType1 = mido.MidiFile(midiType1FilePath)  # считать файл в переменную
         midiType0Tracks = mido.merge_tracks(midiType1.tracks)  # объединить все треки в файле в один
         midiType0 = mido.MidiFile(type=0, ticks_per_beat=midiType1.ticks_per_beat)
         midiType0.tracks.append(midiType0Tracks)
-        filename = midiType1FilePath.removesuffix(self.midiFormat) + self.format0FilenameEnd
+        filename = midiType1FilePath.removesuffix(self.__midiFormat) + self.__format0FilenameEnd
         midiType0.save(filename)  # сохранить файл
         return filename
 
     # Генерация нового MIDI-файла (в отдельном потоке)
-    def midiGenerate(self, midiType0FilesPaths, newFileNamePath, newDurationSeconds, minNearChordIndex, maxNearChordIndex,
+    def __midiGenerate(self, midiType0FilesPaths, newFileNamePath, newDurationSeconds, minNearChordIndex, maxNearChordIndex,
                      endRuleProbability, limitNotesCheckbox, limitNotes, enableGenerateLooping, ignoreNoteOff, window):
         inputMidis = []
         for path in midiType0FilesPaths:
             inputMidis.append(mido.MidiFile(path))  # прочитать все входные MIDI-файлы в список
         # построить КЗ-грамматику
-        grammar, newTicksPerBeat, listOfChordLists = self.buildGrammar(inputMidis,
+        grammar, newTicksPerBeat, listOfChordLists = self.__buildGrammar(inputMidis,
                                                                   limitNotesCheckbox, limitNotes, ignoreNoteOff)
         # начальная последовательность состоит из первых аккордов входных файлов
         # создать новую последовательность аккордов
-        generatedChordSequence = self.produceNewMidi([chordList[0] for chordList in listOfChordLists],
+        generatedChordSequence = self.__produceNewMidi([chordList[0] for chordList in listOfChordLists],
                                                 grammar, newDurationSeconds, newTicksPerBeat, listOfChordLists,
                                                 minNearChordIndex, maxNearChordIndex, endRuleProbability,
                                                 enableGenerateLooping)
@@ -112,7 +112,7 @@ class GenerateMusic:
         outputTrack = mido.MidiTrack()
         outputMidi.tracks.append(outputTrack)
         # перенести сообщения из последовательности аккордов в трек генерируемого MIDI-файла
-        self.moveMsgsFromChordsToTrack(generatedChordSequence, outputTrack)
+        self.__moveMsgsFromChordsToTrack(generatedChordSequence, outputTrack)
         # убрать лишние аккорды, пока длительность не станет меньше или равна требуемой
         while outputMidi.length > newDurationSeconds:
             outputTrack.pop()
@@ -121,7 +121,7 @@ class GenerateMusic:
                                  'Success')  # сообщение в очередь GUI о конце работы потока
 
     # Построение контекстно-зависимой грамматики по MIDI-файлам (формата 0)
-    def buildGrammar(self, midis, limitNotesCheckbox, limitNotes, ignoreNoteOff):
+    def __buildGrammar(self, midis, limitNotesCheckbox, limitNotes, ignoreNoteOff):
         ### импорт статических методов в качестве функций
         appendUniqueChord = UniqueChordAdding.appendUniqueChord
         chordsAreEqual = ChordComparison.chordsAreEqual
@@ -187,10 +187,10 @@ class GenerateMusic:
                     root = GrammarNode()
                     roots.append(root)
                     root.value.append(uniqueChord)
-                self.buildGrammarNode(root, chords)  # построить правила грамматики
+                self.__buildGrammarNode(root, chords)  # построить правила грамматики
         return roots, newTicksPerBeat, listOfChordLists
 
-    def getPreviousChords(self, chordSequence, allChords):  # возможные аккорды перед данной последовательностью аккордов
+    def __getPreviousChords(self, chordSequence, allChords):  # возможные аккорды перед данной последовательностью аккордов
         ### импорт статических методов в качестве функций
         chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual
         appendUniqueChord = UniqueChordAdding.appendUniqueChord
@@ -202,7 +202,7 @@ class GenerateMusic:
                 appendUniqueChord(chord, previousChords)  # доб. аккорд в список, если его там ещё нет
         return previousChords
 
-    def getFollowingChords(self, chordSequence, allChords):  # возможные аккорды после данной последовательности аккордов
+    def __getFollowingChords(self, chordSequence, allChords):  # возможные аккорды после данной последовательности аккордов
         ### импорт статических методов в качестве функций
         chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual
         appendUniqueChord = UniqueChordAdding.appendUniqueChord
@@ -217,23 +217,23 @@ class GenerateMusic:
                 appendUniqueChord(allChords[indexOfFollowingChord], followingChords)
         return followingChords
 
-    def buildGrammarNode(self, root,
+    def __buildGrammarNode(self, root,
                          chords):  # Построить правила для КЗ-грамматики для аккордов данной последовательности (root)
         chordSequencesAreEqual = ChordSequenceComparison.chordSequencesAreEqual  # импорт статического метода в качестве функции
         # получить список, показывающий, какой аккорд может быть после данной последовательности
-        followingChords = self.getFollowingChords(root.value, chords)
+        followingChords = self.__getFollowingChords(root.value, chords)
         if len(followingChords) == 0:  # достигнут конец списка всех аккордов, все правила построены
             return
         if len(followingChords) > 1:  # несколько возможных вариантов аккордов (продукции) после данной последовательности
             # получить список, показывающий, какой аккорд может быть перед данной последовательностью
-            previousChords = self.getPreviousChords(root.value, chords)
+            previousChords = self.__getPreviousChords(root.value, chords)
             newNodes = []  # новые узлы
             for previousChord in previousChords:    # создать новые узлы со значением = предшествующая
                                                     # + текущая последовательность
                 newSequence = []
                 newSequence.append(previousChord)  # расширение контекста на 1 аккорд
                 newSequence.extend(root.value)
-                newFollowingChords = self.getFollowingChords(newSequence,
+                newFollowingChords = self.__getFollowingChords(newSequence,
                                                         chords)  # получить продукции для новой последовательности
                 # найти, есть ли уже узел с такой последовательностью (newSequence) далее в дереве
                 nodesWithThisSequenceValue = [node for node in root.nextNodes.values() if node != None and
@@ -248,7 +248,7 @@ class GenerateMusic:
                         root.nextNodes[newFollowingChord] = nodeWithSequence
                         newNodes.append(nodeWithSequence)
             for node in list(set(newNodes)):  # продолжить строить правила для каждого нового узла
-                self.buildGrammarNode(node, chords)
+                self.__buildGrammarNode(node, chords)
         else:   # только один возможный вариант аккорда после последовательности,
                 # добавить его в словарь продукции, если его ещё нет
             if followingChords[0] not in root.nextNodes.keys():
@@ -256,7 +256,7 @@ class GenerateMusic:
                 root.nextNodes[followingChords[0]] = None
 
     # создать новую последовательность аккордов из MIDI-сообщений
-    def produceNewMidi(self, initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists,
+    def __produceNewMidi(self, initialChordSequence, grammar, durationSeconds, ticksPerBeat, listOfChordLists,
                        minNearChordIndex, maxNearChordIndex, endRuleProbability, enableGenerateLooping):
         ### импорт статических методов в качестве функций
         getChordSequenceDurationInSeconds = GettingOfChordSequenceDurationInSeconds.getChordSequenceDurationInSeconds
@@ -289,7 +289,7 @@ class GenerateMusic:
         return resultedGeneratedChordSequence
 
     # перенести сообщения из последовательности аккордов в трек
-    def moveMsgsFromChordsToTrack(self, chordSequence, midiTrack):
+    def __moveMsgsFromChordsToTrack(self, chordSequence, midiTrack):
         absoluteTime = 0  # время с начала трека
         trackWithExtendedMsgs = []  # список сообщений для трека (объекты класса ExtendedMessage, с абсолютным временем)
         for chord in chordSequence:  # перебрать все аккорды
@@ -319,126 +319,126 @@ class GenerateMusic:
             i = i + 1
 
     # изменить состояние элементов интерфейса: недоступны (True) или доступны (False)
-    def updateWindowElementsDisabled(self, state):
-        self.window['InputFile'].update(disabled=state)
-        self.window['DeleteFile'].update(disabled=state)
-        self.window['ClearFiles'].update(disabled=state)
-        self.window['MidiListView'].update(disabled=state)
-        self.window['SaveAsButton'].update(disabled=state)
-        self.window['SettingsButton'].update(disabled=state)
-        self.window['Duration'].update(disabled=state)
-        self.window['Generate'].update(disabled=state)
+    def __updateWindowElementsDisabled(self, state):
+        self.__window['InputFile'].update(disabled=state)
+        self.__window['DeleteFile'].update(disabled=state)
+        self.__window['ClearFiles'].update(disabled=state)
+        self.__window['MidiListView'].update(disabled=state)
+        self.__window['SaveAsButton'].update(disabled=state)
+        self.__window['SettingsButton'].update(disabled=state)
+        self.__window['Duration'].update(disabled=state)
+        self.__window['Generate'].update(disabled=state)
 
     def eventLoop(self):
         while True:  # The Event Loop
-            event, values = self.window.read()
+            event, values = self.__window.read()
             if event in (None, 'Exit', 'Cancel'):  # Выход из программы
-                for midi0 in self.midiFilesType0Paths:  # Удалить промежуточные файлы
+                for midi0 in self.__midiFilesType0Paths:  # Удалить промежуточные файлы
                     if os.path.isfile(midi0):  # защита от попытки удаления несуществующего файла
                         os.remove(midi0)
                 break
             if event == 'InputFile':  # Добавить MIDI-файл в список исходных файлов для генерации
-                self.midiList.append(values['InputFile'])
-                self.window['MidiListView'].update(self.midiList)
+                self.__midiList.append(values['InputFile'])
+                self.__window['MidiListView'].update(self.__midiList)
             if event == 'DeleteFile' and values['MidiListView']:  # Удалить файл из списка исходных файлов для генерации
-                self.midiList.remove(values['MidiListView'][0])
-                self.window['MidiListView'].update(self.midiList)
+                self.__midiList.remove(values['MidiListView'][0])
+                self.__window['MidiListView'].update(self.__midiList)
             if event == 'ClearFiles':  # Очистить список исходных файлов для генерации
-                self.midiList.clear()
-                self.window['MidiListView'].update(self.midiList)
+                self.__midiList.clear()
+                self.__window['MidiListView'].update(self.__midiList)
             if event == 'Duration':
                 colonCount = 0
                 str = values['Duration']
                 for character in str:  # Защита ввода продолжительности, только цифры и одно ":"
                     if character not in ('0123456789:'):
                         str = str.replace(character, '')
-                        self.window['Duration'].update(str)
+                        self.__window['Duration'].update(str)
                     if character == ':':
                         colonCount = colonCount + 1
                         if colonCount > 1:
                             str = ''.join(str.rsplit(':', 1))
-                            self.window['Duration'].update(str)
+                            self.__window['Duration'].update(str)
                             colonCount = colonCount - 1
-            if event == 'Generate' and self.midiList and values['NewFilePath'] \
+            if event == 'Generate' and self.__midiList and values['NewFilePath'] \
                     and values['Duration'] and values['Duration'][0] != ':':  # Генерация файла
-                self.startTime = datetime.now()
-                self.midiFilesType0Paths = []
-                for midiElement in self.midiList:
-                    self.midiFilesType0Paths.append(self.convertType1ToType0(midiElement))
+                self.__startTime = datetime.now()
+                self.__midiFilesType0Paths = []
+                for midiElement in self.__midiList:
+                    self.__midiFilesType0Paths.append(self.__convertType1ToType0(midiElement))
                 partitionOfDuration = values['Duration'].partition(':')
                 if (partitionOfDuration[1] == ''):  # Получить продолжительность нового трека в секундах
                     duration = int(partitionOfDuration[0])
                 else:
                     duration = int(partitionOfDuration[0]) * 60 + int(partitionOfDuration[2])
-                self.updateWindowElementsDisabled(True)  # сделать элементы интерфейса неактивными
-                self.window['pleaseWait'].update(self.pleaseWaitText + self.startTime.strftime("%H:%M:%S"))
-                self.window['pleaseWait'].update(visible=True)
+                self.__updateWindowElementsDisabled(True)  # сделать элементы интерфейса неактивными
+                self.__window['pleaseWait'].update(self.__pleaseWaitText + self.__startTime.strftime("%H:%M:%S"))
+                self.__window['pleaseWait'].update(visible=True)
                 # запуск генерации в отдельном потоке, чтобы избежать состояния "программа не отвечает"
-                self.window.start_thread(lambda: self.midiGenerate(self.midiFilesType0Paths, values['NewFilePath'],
-                                                         duration, self.currentMinNearChordIndex,
-                                                         self.currentMaxNearChordIndex, self.currentEndRuleProbability,
-                                                         self.currentLimitNotesCheckbox, self.currentLimitNotes,
-                                                         self.currentEnableGenerateLooping, self.currentIgnoreNoteOff,
-                                                         self.window),
+                self.__window.start_thread(lambda: self.__midiGenerate(self.__midiFilesType0Paths, values['NewFilePath'],
+                                                         duration, self.__currentMinNearChordIndex,
+                                                         self.__currentMaxNearChordIndex, self.__currentEndRuleProbability,
+                                                         self.__currentLimitNotesCheckbox, self.__currentLimitNotes,
+                                                         self.__currentEnableGenerateLooping, self.__currentIgnoreNoteOff,
+                                                         self.__window),
                                     ('threadMidiGenerate', 'threadMidiGenerateEnded'))
             if event[0] == 'threadMidiGenerate':
                 if event[1] == 'Complete':
-                    for midi0 in self.midiFilesType0Paths:  # Удалить промежуточные файлы
+                    for midi0 in self.__midiFilesType0Paths:  # Удалить промежуточные файлы
                         if os.path.isfile(midi0):  # защита от попытки удаления несуществующего файла
                             os.remove(midi0)
-                    self.window['pleaseWait'].update(visible=False)
-                    self.updateWindowElementsDisabled(False)  # сделать элементы интерфейса активными
+                    self.__window['pleaseWait'].update(visible=False)
+                    self.__updateWindowElementsDisabled(False)  # сделать элементы интерфейса активными
                     endTime = datetime.now()
-                    deltaTime = endTime - self.startTime
-                    sg.popup('         Успешно сгенерировано\n\nВремя начала = ' + self.startTime.strftime("%H:%M:%S") +
+                    deltaTime = endTime - self.__startTime
+                    sg.popup('         Успешно сгенерировано\n\nВремя начала = ' + self.__startTime.strftime("%H:%M:%S") +
                              '\nВремя завершения = ' + endTime.strftime("%H:%M:%S") +
                              '\nБыло потрачено времени = ' + time.strftime("%H:%M:%S",
                                                                            time.gmtime(deltaTime.total_seconds())),
-                             keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                             keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                              any_key_closes=True, grab_anywhere=True, button_justification='centered')
                     if values['OpenAfterGeneration'] == True:  # Открыть созданный файл, если отмечен checkbox
                         os.system('"' + values['NewFilePath'] + '"')
-            if event == 'Generate' and not self.midiList:
+            if event == 'Generate' and not self.__midiList:
                 sg.popup('Список исходных MIDI-файлов пуст, проверьте входные данные',
-                         keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                         keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                          any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if event == 'Generate' and not values['NewFilePath']:
                 sg.popup('Не указан путь сохранения файла, проверьте входные данные',
-                         keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                         keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                          any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if event == 'Generate' and (not values['Duration'] or values['Duration'][0] == ':' or
                                         values['Duration'][len(values['Duration']) - 1] == ':'):
                 sg.popup('Не указана продолжительность нового трека, проверьте входные данные',
-                         keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                         keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                          any_key_closes=True, grab_anywhere=True, button_justification='centered')
             if event == 'SettingsButton':  # открыть окно доп. настроек
                 layoutSettingsWindow = [[sg.Text('Мин. индекс случайного соседнего аккорда: '), sg.Push(),
-                                         sg.InputText(key='MinIndex', default_text=self.currentMinNearChordIndex,
+                                         sg.InputText(key='MinIndex', default_text=self.__currentMinNearChordIndex,
                                                       enable_events=True,
                                                       size=(14, 1))],
                                         [sg.Text('Макс. индекс случайного соседнего аккорда: '), sg.Push(),
-                                         sg.InputText(key='MaxIndex', default_text=self.currentMaxNearChordIndex,
+                                         sg.InputText(key='MaxIndex', default_text=self.__currentMaxNearChordIndex,
                                                       enable_events=True,
                                                       size=(14, 1))],
                                         [sg.Text('Вероятность конечной продукции вместо промежуточной: '), sg.Push(),
-                                         sg.InputText(key='Probability', default_text=self.currentEndRuleProbability,
+                                         sg.InputText(key='Probability', default_text=self.__currentEndRuleProbability,
                                                       enable_events=True,
                                                       size=(14, 1))],
                                         [sg.Frame('', size=(500, 63), layout=
                                         [[sg.Checkbox('Ограничить кол-во нот во входном файле', enable_events=True,
-                                                      key='LimitNotesCheckbox', default=self.currentLimitNotesCheckbox)],
+                                                      key='LimitNotesCheckbox', default=self.__currentLimitNotesCheckbox)],
                                          [sg.Text('Кол-во нот во входном файле: '), sg.Push(),
                                           sg.InputText(key='LimitNotes', disabled_readonly_background_color='#b7b7b7',
-                                                       default_text=self.currentLimitNotes,
-                                                       disabled=not self.currentLimitNotesCheckbox,
+                                                       default_text=self.__currentLimitNotes,
+                                                       disabled=not self.__currentLimitNotesCheckbox,
                                                        enable_events=True, size=(13, 1))]])],
                                         [sg.Checkbox('Зациклить процесс генерации при достижении конца входных файлов',
-                                                     key='GenerateLooping', default=self.currentEnableGenerateLooping)],
+                                                     key='GenerateLooping', default=self.__currentEnableGenerateLooping)],
                                         [sg.Checkbox('Не учитывать события note_off (выкл. ноты)',
-                                                     key='IgnoreNoteOff', default=self.currentIgnoreNoteOff)],
+                                                     key='IgnoreNoteOff', default=self.__currentIgnoreNoteOff)],
                                         [sg.Push(), sg.Button('Восст. по умолчанию', key='restoreByDefault')],
                                         [sg.Push(), sg.OK(key='OkSettings', size=(7, 1)), sg.Push()]]
-                settingsWindow = sg.Window('Доп. настройки генерации', layoutSettingsWindow, icon=self.icon_name,
+                settingsWindow = sg.Window('Доп. настройки генерации', layoutSettingsWindow, icon=self.__icon_name,
                                            disable_minimize=True, modal=True)
                 while True:
                     event, values = settingsWindow.read()
@@ -448,45 +448,45 @@ class GenerateMusic:
                         if values['MinIndex'] != '' and values['MaxIndex'] != '' and int(values['MinIndex']) > int(
                                 values['MaxIndex']):
                             sg.popup('Мин. значение индекса не может быть больше максимального',
-                                     keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                                     keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
                             continue
                         if values['Probability'] != '' and float(values['Probability']) > 1:
                             sg.popup('Вероятность не может быть больше 1',
-                                     keep_on_top=True, no_titlebar=True, background_color=self.popupBackgroundColor,
+                                     keep_on_top=True, no_titlebar=True, background_color=self.__popupBackgroundColor,
                                      any_key_closes=True, grab_anywhere=True, button_justification='centered')
                             continue
                         if values['MinIndex'] == '':
-                            self.currentMinNearChordIndex = self.defaultMinNearChordIndex
+                            self.__currentMinNearChordIndex = self.__defaultMinNearChordIndex
                         else:
-                            self.currentMinNearChordIndex = int(values['MinIndex'])
+                            self.__currentMinNearChordIndex = int(values['MinIndex'])
                         if values['MaxIndex'] == '':
-                            self.currentMaxNearChordIndex = self.defaultMaxNearChordIndex
+                            self.__currentMaxNearChordIndex = self.__defaultMaxNearChordIndex
                         else:
-                            self.currentMaxNearChordIndex = int(values['MaxIndex'])
+                            self.__currentMaxNearChordIndex = int(values['MaxIndex'])
                         if values['Probability'] == '':
-                            self.currentEndRuleProbability = self.defaultEndRuleProbability
+                            self.__currentEndRuleProbability = self.__defaultEndRuleProbability
                         else:
-                            self.currentEndRuleProbability = float(values['Probability'])
-                        self.currentLimitNotesCheckbox = values['LimitNotesCheckbox']
+                            self.__currentEndRuleProbability = float(values['Probability'])
+                        self.__currentLimitNotesCheckbox = values['LimitNotesCheckbox']
                         if values['LimitNotes'] == '':
-                            self.currentLimitNotes = self.defaultLimitNotes
+                            self.__currentLimitNotes = self.__defaultLimitNotes
                         else:
-                            self.currentLimitNotes = int(values['LimitNotes'])
-                        self.currentEnableGenerateLooping = values['GenerateLooping']
-                        self.currentIgnoreNoteOff = values['IgnoreNoteOff']
+                            self.__currentLimitNotes = int(values['LimitNotes'])
+                        self.__currentEnableGenerateLooping = values['GenerateLooping']
+                        self.__currentIgnoreNoteOff = values['IgnoreNoteOff']
                         break
                     if event == 'restoreByDefault':  # восстановить значения по умолчанию
-                        self.currentMinNearChordIndex = self.defaultMinNearChordIndex
-                        self.currentMaxNearChordIndex = self.defaultMaxNearChordIndex
-                        self.currentEndRuleProbability = self.defaultEndRuleProbability
-                        settingsWindow['MinIndex'].update(self.currentMinNearChordIndex)
-                        settingsWindow['MaxIndex'].update(self.currentMaxNearChordIndex)
-                        settingsWindow['Probability'].update(self.currentEndRuleProbability)
-                        settingsWindow['LimitNotesCheckbox'].update(self.defaultLimitNotesCheckbox)
-                        settingsWindow['LimitNotes'].update(self.defaultLimitNotes)
-                        settingsWindow['GenerateLooping'].update(self.defaultEnableGenerateLooping)
-                        settingsWindow['IgnoreNoteOff'].update(self.defaultIgnoreNoteOff)
+                        self.__currentMinNearChordIndex = self.__defaultMinNearChordIndex
+                        self.__currentMaxNearChordIndex = self.__defaultMaxNearChordIndex
+                        self.__currentEndRuleProbability = self.__defaultEndRuleProbability
+                        settingsWindow['MinIndex'].update(self.__currentMinNearChordIndex)
+                        settingsWindow['MaxIndex'].update(self.__currentMaxNearChordIndex)
+                        settingsWindow['Probability'].update(self.__currentEndRuleProbability)
+                        settingsWindow['LimitNotesCheckbox'].update(self.__defaultLimitNotesCheckbox)
+                        settingsWindow['LimitNotes'].update(self.__defaultLimitNotes)
+                        settingsWindow['GenerateLooping'].update(self.__defaultEnableGenerateLooping)
+                        settingsWindow['IgnoreNoteOff'].update(self.__defaultIgnoreNoteOff)
                         settingsWindow['LimitNotes'].update(disabled=True)
                     if event == 'MinIndex':
                         str = values['MinIndex']
