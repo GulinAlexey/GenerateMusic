@@ -33,7 +33,7 @@ class GenerateMusic:
         self.__defaultLimitNotesCheckbox = False       # ограничить количество нот во входном файле
                                                 # (помогает при зависании программы на объёмных файлах)
         self.__defaultLimitNotes = 500  # ограничение количества нот во входном файле, если отмечен checkbox
-        self.__defaultEnableGenerateLooping = True # флаг включение зацикливания генерации нового файла
+        self.__defaultEnableGenerateLooping = False # флаг включение зацикливания генерации нового файла
                                             # (если достигнут конец входного файла, продолжить
                                             # достраивать последовательность с первого аккорда входного файла)
         self.__defaultIgnoreNoteOff = False    # игнорировать события выкл. ноты, может улучшить генерацию
@@ -52,7 +52,8 @@ class GenerateMusic:
                                                                             # на объёмных файлах)
         self.__currentLimitNotes = self.__defaultLimitNotes     # ограничение количества нот во входном файле,
                                                             # если отмечен checkbox
-        self.__currentEnableGenerateLooping = True    # флаг включение зацикливания генерации нового файла
+        # флаг включение зацикливания генерации нового файла
+        self.__currentEnableGenerateLooping = self.__defaultEnableGenerateLooping
                                                     # (если достигнут конец входного файла, продолжить
                                                     # достраивать последовательность с первого аккорда входного файла)
         self.__currentIgnoreNoteOff = self.__defaultIgnoreNoteOff   # игнорировать события выкл. ноты, может улучшить генерацию
